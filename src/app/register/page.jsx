@@ -55,7 +55,7 @@ export default function RegisterPage() {
     }
   };
 
-  // return it
+  // return it or leave it
   return (
     <div className="min-h-screen bg-[#FAFAFB] text-[#0F172A] flex flex-col justify-between selection:bg-indigo-600 selection:text-white">
       <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12 bg-[#FAFAFB]">
