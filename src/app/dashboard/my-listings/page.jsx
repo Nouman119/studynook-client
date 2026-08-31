@@ -14,6 +14,9 @@ function MyListingsContent() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // এডিট মোডালের স্টেট
+  const [editingRoom, setEditingRoom] = useState(null);
+
   const fetchMyRooms = async () => {
     try {
       setLoading(true);
@@ -37,6 +40,7 @@ function MyListingsContent() {
     }
   }, [user]);
 
+  // রুম ডিলিট করার হ্যান্ডলার
   const handleDelete = async (roomId) => {
     const confirmDelete = window.confirm('Are you sure you want to delete this listing?');
     if (!confirmDelete) return;
@@ -57,6 +61,44 @@ function MyListingsContent() {
     } catch (error) {
       console.error('Delete error:', error);
       alert('Something went wrong while deleting');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // রুম আপডেট সাবমিট হ্যান্ডলার
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const updatedData = {
+      title: form.title.value,
+      location: form.location.value,
+      pricePerHour: parseFloat(form.pricePerHour.value),
+      capacity: parseInt(form.capacity.value),
+      description: form.description.value,
+      images: [form.image.value],
+    };
+
+    try {
+      setActionLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/rooms/${editingRoom._id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(updatedData),
+      });
+      const data = await res.json();
+
+      if (data?.success) {
+        alert('Room updated successfully!');
+        setEditingRoom(null);
+        fetchMyRooms(); // লিস্ট রিফ্রেশ করা
+      } else {
+        alert(data?.message || 'Failed to update room');
+      }
+    } catch (error) {
+      console.error('Update error:', error);
+      alert('Something went wrong during update');
     } finally {
       setActionLoading(false);
     }
@@ -113,6 +155,12 @@ function MyListingsContent() {
                   <td className="py-4 px-6 text-gray-600">{room.capacity} Persons</td>
                   <td className="py-4 px-6 text-right space-x-3">
                     <button
+                      onClick={() => setEditingRoom(room)}
+                      className="text-indigo-600 hover:text-indigo-800 font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => handleDelete(room._id)}
                       disabled={actionLoading}
                       className="text-rose-600 hover:text-rose-800 font-medium disabled:opacity-50"
@@ -124,6 +172,97 @@ function MyListingsContent() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* এডিট মোডাল (Edit Modal) */}
+      {editingRoom && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+            <h2 className="text-xl font-bold mb-4">Edit Room Details</h2>
+            <form onSubmit={handleUpdateSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Room Title</label>
+                <input
+                  type="text"
+                  name="title"
+                  defaultValue={editingRoom.title}
+                  required
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    name="location"
+                    defaultValue={editingRoom.location}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Price / Hour ($)</label>
+                  <input
+                    type="number"
+                    name="pricePerHour"
+                    defaultValue={editingRoom.pricePerHour}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                  <input
+                    type="number"
+                    name="capacity"
+                    defaultValue={editingRoom.capacity}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                  <input
+                    type="url"
+                    name="image"
+                    defaultValue={editingRoom.images?.[0] || ''}
+                    required
+                    className="w-full px-3 py-2 border rounded-lg"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  name="description"
+                  rows="3"
+                  defaultValue={editingRoom.description}
+                  required
+                  className="w-full px-3 py-2 border rounded-lg"
+                ></textarea>
+              </div>
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingRoom(null)}
+                  className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
