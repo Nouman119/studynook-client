@@ -1,145 +1,102 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FaArrowLeft, FaArrowRight, FaMapMarkerAlt, FaDoorOpen, FaWifi } from 'react-icons/fa';
+import { ArrowRight, BookOpen, Users, MapPin, Wifi, ShieldCheck } from 'lucide-react';
 
 export default function Hero() {
-  const slides = [
-    {
-      title: "Find your comfort working zone with StudyNook",
-      subtitle: "Change your work environment by using a co-working place, to meet new people and gain a new network",
-      image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80",
-    },
-    {
-      title: "Collaborate and grow with dedicated group spaces",
-      subtitle: "Book premium meeting and discussion rooms designed for focused group studies and projects.",
-      image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80",
-    }
-  ];
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
-  };
-
-  // Auto slide effect (every 4 seconds)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      nextSlide();
-    }, 4000);
-
-    return () => clearInterval(timer);
-  }, [currentIndex]);
-
-  const current = slides[currentIndex];
-
   return (
-    <section className="py-12 px-4 sm:px-6 lg:px-8 bg-[#FAFAFB] text-[#0F172A] overflow-hidden">
-      <div className="max-w-7xl mx-auto">
+    <section className="relative overflow-hidden bg-[#F8F9FA] dark:bg-zinc-950 text-[#0F172A] dark:text-white py-12 lg:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="relative flex flex-col lg:flex-row items-center">
+        {/* Top Split Layout: Left Text & Right Image Cards */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center mb-16">
           
-          <div className="w-full lg:w-[72%] relative rounded-2xl overflow-hidden shadow-2xl h-[420px] sm:h-[480px] z-0">
-            <img 
-              src={current.image} 
-              alt="Study Room" 
-              className="w-full h-full object-cover transition-all duration-500"
-            />
-            <div className="absolute inset-0 bg-black/10"></div>
+          {/* Left Content Area */}
+          <div className="lg:col-span-6 space-y-6 z-10">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] text-gray-900 dark:text-white">
+              Find your quiet space <br />
+              <span className="text-indigo-600">with art and focus.</span>
+            </h1>
+            <p className="text-base sm:text-lg text-gray-600 dark:text-zinc-400 max-w-lg leading-relaxed">
+              Not only finding a functional study room, but also experiencing a peaceful environment designed for maximum productivity and collaboration.
+            </p>
 
-            <div className="absolute bottom-6 left-6 flex items-center gap-3 bg-white/95 backdrop-blur-md p-2.5 rounded-xl shadow-lg z-10">
-              <button 
-                onClick={prevSlide}
-                className="p-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg transition"
-                aria-label="Previous Slide"
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Link
+                href="/rooms"
+                className="px-6 py-3.5 text-sm font-semibold text-white bg-gray-900 dark:bg-white dark:text-gray-900 hover:bg-indigo-600 dark:hover:bg-indigo-50 dark:hover:text-indigo-600 rounded-xl shadow-lg transition-all inline-flex items-center gap-2"
               >
-                <FaArrowLeft size={12} />
-              </button>
-              <button 
-                onClick={nextSlide}
-                className="p-3 bg-[#848B79] hover:bg-[#6e7464] text-white rounded-lg transition"
-                aria-label="Next Slide"
+                Get Started <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/rooms"
+                className="px-6 py-3.5 text-sm font-semibold text-gray-700 dark:text-zinc-300 hover:text-indigo-600 transition-all inline-flex items-center gap-1"
               >
-                <FaArrowRight size={12} />
-              </button>
-              <div className="px-3 text-xs font-bold text-gray-700 tracking-wider flex items-center gap-2">
-                <span>0{currentIndex + 1}</span>
-                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-[#848B79] transition-all duration-300" 
-                    style={{ width: `${((currentIndex + 1) / slides.length) * 100}%` }}
-                  ></div>
-                </div>
-                <span className="text-gray-400">0{slides.length}</span>
-              </div>
+                Learn More <span>&gt;</span>
+              </Link>
             </div>
           </div>
 
-          <div className="w-full lg:w-[44%] lg:-ml-36 mt-6 lg:mt-0 z-25 bg-white/75 backdrop-blur-md p-6 sm:p-8 rounded-2xl shadow-2xl border border-white/60">
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight">
-                {current.title}
-              </h2>
-              <div className="w-10 h-0.5 bg-[#848B79] shrink-0"></div>
+          {/* Right Image Cards Area (Matching Reference Layout) */}
+          <div className="lg:col-span-6 grid grid-cols-2 gap-4 relative">
+            {/* Center Tall Image */}
+            <div className="relative h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-xl bg-slate-100">
+              <img
+                src="https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80"
+                alt="Study Room Interior"
+                className="w-full h-full object-cover hover:scale-105 transition duration-500"
+              />
             </div>
 
-            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed mt-2">
-              {current.subtitle}
-            </p>
-
-            <div className="grid grid-cols-2 gap-y-3 gap-x-2 mt-6 pt-5 border-t border-gray-200/60 text-xs font-semibold text-gray-700">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px]">✓</span> Virtual Office Setup
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px]">✓</span> Open Workspace
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px]">✓</span> Space for Event
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center text-[10px]">✓</span> Chill Out Zone
+            {/* Right Side Image with Service Overlay Card */}
+            <div className="relative h-[360px] sm:h-[420px] rounded-3xl overflow-hidden shadow-xl bg-slate-100 mt-6 lg:mt-10">
+              <img
+                src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
+                alt="Collaborative Space"
+                className="w-full h-full object-cover hover:scale-105 transition duration-500"
+              />
+              
+              {/* Floating Service Card at Bottom of Right Image */}
+              <div className="absolute bottom-4 left-4 right-4 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md p-4 rounded-2xl shadow-lg border border-white/20 dark:border-zinc-800 space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Our Features</p>
+                
+                <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-white py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                  <span className="flex items-center gap-2"><BookOpen className="w-3.5 h-3.5 text-indigo-600" /> Quiet Study Desks</span>
+                  <span>&rarr;</span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-white py-1.5 border-b border-gray-100 dark:border-zinc-800">
+                  <span className="flex items-center gap-2"><Users className="w-3.5 h-3.5 text-indigo-600" /> Group Meeting Rooms</span>
+                  <span>&rarr;</span>
+                </div>
+                <div className="flex items-center justify-between text-xs font-bold text-gray-800 dark:text-white py-1.5">
+                  <span className="flex items-center gap-2"><Wifi className="w-3.5 h-3.5 text-indigo-600" /> High-Speed Wi-Fi</span>
+                  <span>&rarr;</span>
+                </div>
               </div>
             </div>
+
           </div>
 
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 pt-10 border-t border-gray-200/60">
-          <div className="flex flex-col items-start p-6 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="p-3.5 bg-sky-50 text-sky-600 rounded-xl text-xl flex items-center justify-center shadow-inner mb-4">
-              <FaMapMarkerAlt />
-            </div>
-            <h3 className="text-base font-bold text-gray-900">20+ Location</h3>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
+        {/* Bottom Statistics Section (Matching the Reference 4-column layout) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-12 border-t border-gray-200 dark:border-zinc-800">
+          <div>
+            <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">321</p>
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">Projects & Rooms Completed</p>
           </div>
-
-          <div className="flex flex-col items-start p-6 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="p-3.5 bg-sky-50 text-sky-600 rounded-xl text-xl flex items-center justify-center shadow-inner mb-4">
-              <FaDoorOpen />
-            </div>
-            <h3 className="text-base font-bold text-gray-900">324 Rooms Available</h3>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
+          <div>
+            <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">25</p>
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">Awards & Recognition</p>
           </div>
-
-          <div className="flex flex-col items-start p-6 rounded-2xl bg-white shadow-sm border border-gray-100">
-            <div className="p-3.5 bg-sky-50 text-sky-600 rounded-xl text-xl flex items-center justify-center shadow-inner mb-4">
-              <FaWifi />
-            </div>
-            <h3 className="text-base font-bold text-gray-900">100% Internet Connected</h3>
-            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-            </p>
+          <div>
+            <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">31</p>
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">Expert Mentors & Staff</p>
+          </div>
+          <div>
+            <p className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight">15</p>
+            <p className="text-xs sm:text-sm font-medium text-gray-500 dark:text-zinc-400 mt-1">Years Experience</p>
           </div>
         </div>
 

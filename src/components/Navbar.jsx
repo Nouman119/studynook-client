@@ -54,16 +54,17 @@ export default function Navbar() {
         <nav className="bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md border border-[#E2E8F0] dark:border-zinc-800 shadow-[0_4px_25px_-5px_rgba(0,0,0,0.06)] rounded-2xl px-5 py-3 transition-all">
           <div className="flex items-center justify-between">
             
-            {/* 1. Brand Logo */}
-            <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20 group-hover:bg-indigo-700 transition-colors">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <span className="font-extrabold text-xl tracking-tight text-[#0F172A] dark:text-white">
-                Study<span className="text-indigo-600">Nook</span>
-              </span>
-            </Link>
-
+{/* 1. Brand Logo */}
+<Link href="/" className="flex items-center gap-2.5 group">
+  <div className="w-10 h-10 rounded-2xl bg-zinc-900 dark:bg-zinc-800 text-indigo-400 flex items-center justify-center shadow-md group-hover:bg-indigo-600 group-hover:text-white transition-all">
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+  </div>
+  <span className="font-extrabold text-xl tracking-tight text-[#0F172A] dark:text-white">
+    Study<span className="text-indigo-600">Nook</span>
+  </span>
+</Link>
             {/* 2. Desktop Navigation Links */}
             <div className="hidden lg:flex items-center gap-6 xl:gap-8">
               {navLinks.map((link) => (
