@@ -1,100 +1,57 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { MapPin, Users, DollarSign, Calendar, Clock, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { Search, MapPin, Users, DollarSign, SlidersHorizontal, ArrowRight } from 'lucide-react';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
-export default function RoomDetailsPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const { user } = useAuth();
-
-  const [room, setRoom] = useState(null);
+export default function AllRoomsPage() {
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
 
-  // বুকিং ফর্মের স্টেট
-  const [bookingDate, setBookingDate] = useState('');
-  const [timeSlot, setTimeSlot] = useState('09:00 AM - 12:00 PM');
-  const [guests, setGuests] = useState(1);
+  // সার্চ, ফিল্টার এবং সর্টিং স্টেট
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('default');
 
-  useEffect(() => {
-    if (id) {
-      fetchRoomDetails();
-    }
-  }, [id]);
-
-  const fetchRoomDetails = async () => {
+  const fetchRooms = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/rooms/${id}`);
+      const res = await fetch(`${API_BASE_URL}/api/rooms`);
       const data = await res.json();
       if (data?.success) {
-        setRoom(data.data);
+        setRooms(data.data || []);
       }
     } catch (error) {
-      console.error('Error fetching room details:', error);
+      console.error('Error fetching rooms:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // মোট ভাড়ার হিসাব (Price Calculation)
-  const calculateTotal = () => {
-    if (!room) return 0;
-    return room.pricePerHour * guests * 3; // ধরে নিচ্ছি প্রতি স্লটে ৩ ঘণ্টা
-  };
+  useEffect(() => {
+    fetchRooms();
+  }, []);
 
-  // বুকিং সাবমিট হ্যান্ডলার
-  const handleConfirmBooking = async (e) => {
-    e.preventDefault();
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+  // ক্যাটাগরি লিস্ট ডাইনামিক্যালি তৈরি করা
+  const categories = ['All', ...new Set(rooms.map((r) => r.category).filter(Boolean))];
 
-    const bookingPayload = {
-      roomId: room._id,
-      roomTitle: room.title,
-      pricePerHour: room.pricePerHour,
-      totalPrice: calculateTotal(),
-      date: bookingDate,
-      timeSlot,
-      guests: Number(guests),
-      userName: user.name,
-      userEmail: user.email,
-    };
-
-    try {
-      setActionLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(bookingPayload),
-      });
-      const data = await res.json();
-
-      if (data?.success) {
-        alert('Room booked successfully! Check your My Bookings page.');
-        setIsModalOpen(false);
-        router.push('/dashboard/my-bookings');
-      } else {
-        alert(data?.message || 'Failed to book room');
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      alert('Something went wrong during booking');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+  // ফিল্টারিং এবং সর্টিং লজিক
+  const filteredRooms = rooms
+    .filter((room) => {
+      const matchesSearch =
+        room.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.location?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || room.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'low-high') return a.pricePerHour - b.pricePerHour;
+      if (sortBy === 'high-low') return b.pricePerHour - a.pricePerHour;
+      return 0; // default
+    });
 
   if (loading) {
     return (
@@ -104,179 +61,109 @@ export default function RoomDetailsPage() {
     );
   }
 
-  if (!room) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Room Not Found</h2>
-        <Link href="/rooms" className="text-indigo-600 hover:underline">Back to All Rooms</Link>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <Link href="/rooms" className="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-indigo-600 mb-6 transition">
-        <ArrowLeft className="w-4 h-4" /> Back to Rooms
-      </Link>
+      {/* Page Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Explore Study Rooms</h1>
+        <p className="text-gray-500 text-sm">Discover quiet, fully-equipped spaces tailored for your productivity.</p>
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Left & Center: Room Details & Gallery */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-2xl overflow-hidden border shadow-sm h-[400px] bg-gray-100">
-            <img
-              src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'}
-              alt={room.title}
-              className="w-full h-full object-cover"
-            />
-          </div>
-
-          <div>
-            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-semibold rounded-full uppercase tracking-wider">
-              {room.category || 'Study Space'}
-            </span>
-            <h1 className="text-3xl font-extrabold text-gray-900 mt-2 mb-3">{room.title}</h1>
-            <p className="flex items-center gap-1.5 text-gray-600 text-sm mb-6">
-              <MapPin className="w-4 h-4 text-indigo-600" /> {room.location}
-            </p>
-
-            <div className="border-t border-b py-4 grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600"><DollarSign className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-xs text-gray-500">Price / Hour</p>
-                  <p className="font-bold text-gray-900">${room.pricePerHour}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600"><Users className="w-5 h-5" /></div>
-                <div>
-                  <p className="text-xs text-gray-500">Capacity</p>
-                  <p className="font-bold text-gray-900">{room.capacity} Persons</p>
-                </div>
-              </div>
-            </div>
-
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Description</h3>
-            <p className="text-gray-600 leading-relaxed">{room.description}</p>
-          </div>
+      {/* Search, Filter & Sort Controls Bar */}
+      <div className="bg-white border rounded-2xl p-4 shadow-sm mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
+        {/* Search Bar */}
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by room title or location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+          />
         </div>
 
-        {/* Right: Booking Action Sidebar */}
-        <div className="lg:col-span-1">
-          <div className="bg-white border rounded-2xl p-6 shadow-sm sticky top-6 space-y-6">
-            <div className="flex justify-between items-center">
-              <span className="text-2xl font-extrabold text-gray-900">${room.pricePerHour}</span>
-              <span className="text-sm text-gray-500">/ hour</span>
-            </div>
+        {/* Category Filter & Sorting */}
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Category Filter */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
 
-            <hr />
-
-            {user ? (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition"
-              >
-                Book Now
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="block text-center w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-md transition"
-              >
-                Login to Book Room
-              </Link>
-            )}
-          </div>
+          {/* Sorting Dropdown */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+          >
+            <option value="default">Sort by: Default</option>
+            <option value="low-high">Price: Low to High</option>
+            <option value="high-low">Price: High to Low</option>
+          </select>
         </div>
       </div>
 
-      {/* Booking Modal (পপ-আপ) */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h2 className="text-xl font-bold mb-4 text-gray-900">Confirm Room Reservation</h2>
-            <form onSubmit={handleConfirmBooking} className="space-y-4">
+      {/* Room Cards Grid */}
+      {filteredRooms.length === 0 ? (
+        <div className="bg-white border rounded-2xl p-16 text-center text-gray-500 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">No rooms found</h3>
+          <p className="text-sm">Try adjusting your search query or filter criteria.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredRooms.map((room) => (
+            <div
+              key={room._id}
+              className="bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
+            >
               <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Your Name (Read-only)</label>
-                <input
-                  type="text"
-                  value={user?.name || ''}
-                  readOnly
-                  className="w-full px-3 py-2 bg-gray-100 border rounded-lg text-sm text-gray-700 cursor-not-allowed"
-                />
+                {/* Thumbnail */}
+                <div className="relative h-48 overflow-hidden bg-gray-100">
+                  <img
+                    src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
+                    alt={room.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                  />
+                  <span className="absolute top-3 right-3 px-3 py-1 bg-white/95 backdrop-blur-sm text-indigo-600 text-xs font-bold rounded-full shadow-sm">
+                    ${room.pricePerHour} / hr
+                  </span>
+                </div>
+
+                {/* Content */}
+                <div className="p-5">
+                  <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">
+                    {room.category || 'Study Space'}
+                  </span>
+                  <h3 className="text-lg font-bold text-gray-900 mt-1 mb-2 line-clamp-1">{room.title}</h3>
+                  <p className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-600" /> {room.location}
+                  </p>
+                  <p className="text-sm text-gray-600 line-clamp-2 mb-4">{room.description}</p>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Your Email (Read-only)</label>
-                <input
-                  type="email"
-                  value={user?.email || ''}
-                  readOnly
-                  className="w-full px-3 py-2 bg-gray-100 border rounded-lg text-sm text-gray-700 cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Select Date</label>
-                <input
-                  type="date"
-                  value={bookingDate}
-                  onChange={(e) => setBookingDate(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Time Slot</label>
-                <select
-                  value={timeSlot}
-                  onChange={(e) => setTimeSlot(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
+              {/* Card Footer / Details Link */}
+              <div className="px-5 pb-5 pt-0 flex items-center justify-between border-t border-gray-50 pt-4">
+                <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                  <Users className="w-3.5 h-3.5 text-indigo-600" /> {room.capacity} Seats
+                </div>
+                <Link
+                  href={`/rooms/${room._id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition"
                 >
-                  <option value="09:00 AM - 12:00 PM">09:00 AM - 12:00 PM</option>
-                  <option value="12:00 PM - 03:00 PM">12:00 PM - 03:00 PM</option>
-                  <option value="03:00 PM - 06:00 PM">03:00 PM - 06:00 PM</option>
-                  <option value="06:00 PM - 09:00 PM">06:00 PM - 09:00 PM</option>
-                </select>
+                  View Details <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase text-gray-600 mb-1">Number of Guests / Seats</label>
-                <input
-                  type="number"
-                  min="1"
-                  max={room.capacity}
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 border rounded-lg text-sm"
-                />
-              </div>
-
-              <div className="bg-indigo-50 p-3 rounded-xl flex justify-between items-center">
-                <span className="text-sm font-semibold text-gray-700">Total Price:</span>
-                <span className="text-lg font-bold text-indigo-600">${calculateTotal()}</span>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow transition disabled:opacity-50"
-                >
-                  Confirm Booking
-                </button>
-              </div>
-            </form>
-          </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
