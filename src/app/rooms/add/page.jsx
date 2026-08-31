@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import PrivateRoute from '@/components/PrivateRoute';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
-export default function AddRoomPage() {
+function AddRoomContent() {
   const { user } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -19,9 +20,10 @@ export default function AddRoomPage() {
     const roomData = {
       title: form.title.value,
       location: form.location.value,
-      price: parseFloat(form.price.value),
+      pricePerHour: parseFloat(form.price.value),
       capacity: parseInt(form.capacity.value),
-      image: form.image.value,
+      images: [form.image.value],
+      category: 'Study Pod',
       description: form.description.value,
       userEmail: user?.email,
       userName: user?.displayName || 'Anonymous',
@@ -60,7 +62,7 @@ export default function AddRoomPage() {
           <label className="block text-sm font-medium text-gray-700 mb-1">Room Title</label>
           <input type="text" name="title" required className="w-full px-4 py-2 border rounded-lg focus:ring-indigo-500 focus:border-indigo-500" placeholder="e.g. Quiet Corner Study Pod" />
         </div>
-
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Location / Area</label>
@@ -104,5 +106,13 @@ export default function AddRoomPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function AddRoomPage() {
+  return (
+    <PrivateRoute>
+      <AddRoomContent />
+    </PrivateRoute>
   );
 }
