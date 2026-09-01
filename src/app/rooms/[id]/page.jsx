@@ -1,57 +1,104 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { Search, MapPin, Users, DollarSign, SlidersHorizontal, ArrowRight } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { MapPin, Users, DollarSign, Calendar, Clock, CheckCircle2, ArrowLeft, ShieldCheck, Wifi } from 'lucide-react';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
-export default function AllRoomsPage() {
-  const [rooms, setRooms] = useState([]);
+export default function RoomDetailsPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const { user } = useAuth() || {};
+
+  const [room, setRoom] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // সার্চ, ফিল্টার এবং সর্টিং স্টেট
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('default');
+  // Booking Form States
+  const [bookingDate, setBookingDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
 
-  const fetchRooms = async () => {
+  useEffect(() => {
+    if (id) {
+      fetchRoomDetails();
+    }
+  }, [id]);
+
+  const fetchRoomDetails = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/rooms`);
+      const res = await fetch(`${API_BASE_URL}/api/rooms/${id}`);
       const data = await res.json();
       if (data?.success) {
-        setRooms(data.data || []);
+        setRoom(data.data);
       }
     } catch (error) {
-      console.error('Error fetching rooms:', error);
+      console.error('Error fetching room details:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRooms();
-  }, []);
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    setSuccessMessage('');
+    setErrorMessage('');
 
-  // ক্যাটাগরি লিস্ট ডাইনামিক্যালি তৈরি করা
-  const categories = ['All', ...new Set(rooms.map((r) => r.category).filter(Boolean))];
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
-  // ফিল্টারিং এবং সর্টিং লজিক
-  const filteredRooms = rooms
-    .filter((room) => {
-      const matchesSearch =
-        room.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.location?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || room.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'low-high') return a.pricePerHour - b.pricePerHour;
-      if (sortBy === 'high-low') return b.pricePerHour - a.pricePerHour;
-      return 0; // default
-    });
+    if (!bookingDate || !startTime || !endTime) {
+      setErrorMessage('Please select date and time slots.');
+      return;
+    }
+
+    try {
+      setBookingLoading(true);
+      const bookingData = {
+        roomId: room._id,
+        roomTitle: room.title,
+        roomImage: room.images?.[0] || '',
+        pricePerHour: room.pricePerHour,
+        date: bookingDate,
+        startTime,
+        endTime,
+        userEmail: user.email,
+        userName: user.name || 'Scholar',
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/bookings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(bookingData),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data?.success) {
+        setSuccessMessage('Study room booked successfully!');
+        setTimeout(() => {
+          router.push('/dashboard/my-bookings');
+        }, 1500);
+      } else {
+        setErrorMessage(data?.message || 'Failed to book room. Try again.');
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      setErrorMessage('An unexpected error occurred.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -61,111 +108,161 @@ export default function AllRoomsPage() {
     );
   }
 
+  if (!room) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Room Not Found</h2>
+        <p className="text-gray-500 mb-6">The study room you are looking for does not exist or has been removed.</p>
+        <button
+          onClick={() => router.push('/rooms')}
+          className="px-5 py-2.5 bg-indigo-600 text-white font-semibold rounded-xl text-sm"
+        >
+          Back to Rooms
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      {/* Page Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Explore Study Rooms</h1>
-        <p className="text-gray-500 text-sm">Discover quiet, fully-equipped spaces tailored for your productivity.</p>
-      </div>
+      {/* Back Button */}
+      <button
+        onClick={() => router.back()}
+        className="inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-indigo-600 mb-6 transition"
+      >
+        <ArrowLeft className="w-4 h-4" /> Back to Rooms
+      </button>
 
-      {/* Search, Filter & Sort Controls Bar */}
-      <div className="bg-white border rounded-2xl p-4 shadow-sm mb-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-        {/* Search Bar */}
-        <div className="relative w-full md:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by room title or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-          />
-        </div>
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        
+        {/* Left: Room Details */}
+        <div className="lg:col-span-7 space-y-6">
+          <div>
+            <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">
+              {room.category || 'Study Space'}
+            </span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight">{room.title}</h1>
+            <p className="flex items-center gap-1.5 text-sm text-gray-500 mt-2">
+              <MapPin className="w-4 h-4 text-indigo-600" /> {room.location}
+            </p>
+          </div>
 
-        {/* Category Filter & Sorting */}
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Category Filter */}
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
+          {/* Main Thumbnail */}
+          <div className="rounded-3xl overflow-hidden shadow-lg h-[360px] sm:h-[420px] bg-gray-100">
+            <img
+              src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=80'}
+              alt={room.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-          {/* Sorting Dropdown */}
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="px-3 py-2 border rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
-          >
-            <option value="default">Sort by: Default</option>
-            <option value="low-high">Price: Low to High</option>
-            <option value="high-low">Price: High to Low</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Room Cards Grid */}
-      {filteredRooms.length === 0 ? (
-        <div className="bg-white border rounded-2xl p-16 text-center text-gray-500 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-1">No rooms found</h3>
-          <p className="text-sm">Try adjusting your search query or filter criteria.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRooms.map((room) => (
-            <div
-              key={room._id}
-              className="bg-white border rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-            >
-              <div>
-                {/* Thumbnail */}
-                <div className="relative h-48 overflow-hidden bg-gray-100">
-                  <img
-                    src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
-                    alt={room.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                  />
-                  <span className="absolute top-3 right-3 px-3 py-1 bg-white/95 backdrop-blur-sm text-indigo-600 text-xs font-bold rounded-full shadow-sm">
-                    ${room.pricePerHour} / hr
-                  </span>
-                </div>
-
-                {/* Content */}
-                <div className="p-5">
-                  <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">
-                    {room.category || 'Study Space'}
-                  </span>
-                  <h3 className="text-lg font-bold text-gray-900 mt-1 mb-2 line-clamp-1">{room.title}</h3>
-                  <p className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-600" /> {room.location}
-                  </p>
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-4">{room.description}</p>
-                </div>
+          {/* Description */}
+          <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="text-lg font-bold text-gray-900">About This Study Space</h3>
+            <p className="text-gray-600 text-sm leading-relaxed">{room.description}</p>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-4 border-t">
+              <div className="flex items-center gap-2.5 text-sm text-gray-700 font-medium">
+                <Users className="w-4 h-4 text-indigo-600" /> Capacity: {room.capacity} Seats
               </div>
-
-              {/* Card Footer / Details Link */}
-              <div className="px-5 pb-5 pt-0 flex items-center justify-between border-t border-gray-50 pt-4">
-                <div className="flex items-center gap-1 text-xs text-gray-500 font-medium">
-                  <Users className="w-3.5 h-3.5 text-indigo-600" /> {room.capacity} Seats
-                </div>
-                <Link
-                  href={`/rooms/${room._id}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800 transition"
-                >
-                  View Details <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+              <div className="flex items-center gap-2.5 text-sm text-gray-700 font-medium">
+                <Wifi className="w-4 h-4 text-indigo-600" /> High-Speed Wi-Fi
+              </div>
+              <div className="flex items-center gap-2.5 text-sm text-gray-700 font-medium">
+                <ShieldCheck className="w-4 h-4 text-indigo-600" /> Quiet Zone
               </div>
             </div>
-          ))}
+          </div>
         </div>
-      )}
+
+        {/* Right: Booking Box / Card */}
+        <div className="lg:col-span-5">
+          <div className="bg-white border rounded-3xl p-6 sm:p-8 shadow-xl sticky top-24 space-y-6">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div>
+                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">Price Rate</p>
+                <p className="text-3xl font-black text-gray-900 mt-0.5">
+                  ${room.pricePerHour} <span className="text-xs font-normal text-gray-500">/ hour</span>
+                </p>
+              </div>
+              <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full">
+                Available Now
+              </span>
+            </div>
+
+            {/* Booking Form */}
+            <form onSubmit={handleBookingSubmit} className="space-y-4">
+              {successMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold rounded-xl flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" /> {successMessage}
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-600 text-xs font-semibold rounded-xl">
+                  {errorMessage}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">Booking Date</label>
+                <div className="relative">
+                  <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">Start Time</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1.5">End Time</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="w-full px-3 py-2.5 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* User Info Readonly Box */}
+              {user && (
+                <div className="p-3.5 bg-gray-50 rounded-2xl border text-xs space-y-1">
+                  <p className="text-gray-400 uppercase font-bold text-[10px]">Booking As</p>
+                  <p className="font-semibold text-gray-800">{user.name || 'Scholar'}</p>
+                  <p className="text-gray-500">{user.email}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={bookingLoading}
+                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-600/25 transition disabled:opacity-50 text-sm cursor-pointer"
+              >
+                {bookingLoading ? 'Processing Booking...' : 'Confirm Room Booking'}
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
