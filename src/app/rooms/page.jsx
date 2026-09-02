@@ -176,7 +176,7 @@ export default function AllRoomsPage() {
                 </div>
               </div>
 
-              <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-gray-100 dark:border-zinc-800/80 pt-4">
+              <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-gray-100 dark:border-zinc-800/80">
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 font-semibold">
                   <Users className="w-4 h-4 text-indigo-600" /> {room.capacity} Seats
                 </div>
