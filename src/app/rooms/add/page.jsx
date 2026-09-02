@@ -79,10 +79,20 @@ export default function AddRoomPage() {
         }
       };
 
+      // Get token from cookies or localStorage securely
+      const getCookie = (name) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      };
+      const token = getCookie('token') || localStorage.getItem('token');
+
       const res = await fetch(`${API_BASE_URL}/api/rooms`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify(roomData),
       });
