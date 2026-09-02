@@ -2,295 +2,237 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, Users, ArrowRight, X, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
-import Footer from '@/components/Footer';
+import { Search, MapPin, Users, SlidersHorizontal, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
 export default function AllRoomsPage() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedAmenities, setSelectedAmenities] = useState([]);
-  const [maxPrice, setMaxPrice] = useState('');
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('default');
+
+  // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  useEffect(() => {
-    async function fetchRooms() {
-      try {
-        const res = await fetch('http://localhost:5000/api/rooms');
-        const data = await res.json();
-        if (data && data.success) {
-          setRooms(data.data || []);
-        } else if (Array.isArray(data)) {
-          setRooms(data);
-        }
-      } catch (err) {
-        console.error('Failed to fetch rooms:', err);
-      } finally {
-        setLoading(false);
+  const fetchRooms = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE_URL}/api/rooms`);
+      const data = await res.json();
+      if (data?.success) {
+        setRooms(data.data || []);
       }
+    } catch (error) {
+      console.error('Error fetching rooms:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
     fetchRooms();
   }, []);
 
-  const handleAmenityChange = (amenity) => {
+  const categories = ['All', ...new Set(rooms.map((r) => r.category).filter(Boolean))];
+
+  const filteredRooms = rooms
+    .filter((room) => {
+      const matchesSearch =
+        room.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        room.location?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = selectedCategory === 'All' || room.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'low-high') return a.pricePerHour - b.pricePerHour;
+      if (sortBy === 'high-low') return b.pricePerHour - a.pricePerHour;
+      return 0;
+    });
+
+  // Reset to page 1 when filter/search changes
+  useEffect(() => {
     setCurrentPage(1);
-    if (selectedAmenities.includes(amenity)) {
-      setSelectedAmenities(selectedAmenities.filter(item => item !== amenity));
-    } else {
-      setSelectedAmenities([...selectedAmenities, amenity]);
-    }
-  };
+  }, [searchQuery, selectedCategory, sortBy]);
 
-  const handleReset = () => {
-    setSearchQuery('');
-    setSelectedAmenities([]);
-    setMaxPrice('');
-    setCurrentPage(1);
-  };
-
-  const filteredRooms = rooms.filter((room) => {
-    const titleMatch = (room.title || room.name || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const priceVal = room.pricePerHour || room.price_per_hour || 0;
-    const priceMatch = maxPrice === '' || priceVal <= Number(maxPrice);
-    const roomAmenities = room.amenities || [];
-    const amenityMatch = selectedAmenities.every(am => roomAmenities.includes(am));
-
-    return titleMatch && priceMatch && amenityMatch;
-  });
-
+  // Pagination calculations
   const totalPages = Math.ceil(filteredRooms.length / itemsPerPage);
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentRooms = filteredRooms.slice(indexOfFirstItem, indexOfLastItem);
 
-  const amenitiesList = ['Wi-Fi', 'Whiteboard', 'Projector', 'Power Outlets', 'Quiet Zone', 'Air Conditioning'];
+  if (loading) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-zinc-950">
+        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#FAFAFB] text-[#0F172A] flex flex-col justify-between">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white dark:bg-zinc-950 min-h-screen text-[#0F172A] dark:text-white">
+      
+      {/* Page Header */}
+      <div className="mb-8 text-center max-w-2xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 text-xs font-bold mb-3 border border-indigo-100 dark:border-zinc-800">
+          <Sparkles className="w-3.5 h-3.5" /> Explore Workspace Collection
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">Discover Study Rooms</h1>
+        <p className="text-gray-500 dark:text-zinc-400 text-sm">Find quiet, fully-equipped spaces tailored for your productivity and team collaboration.</p>
+      </div>
+
+      {/* Horizontal Filter & Search Bar */}
+      <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-gray-100 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-xl shadow-zinc-100 dark:shadow-none mb-10 space-y-4">
         
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A]">
-            All Study Rooms
-          </h1>
-          <p className="mt-2 text-sm sm:text-base text-[#64748B]">
-            Browse the full catalog. Filter by amenity, price, or search by name.
-          </p>
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:w-[420px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by room title or location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-gray-50/80 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider hidden sm:inline">Sort:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="w-full md:w-auto px-4 py-3 bg-gray-50/80 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition cursor-pointer"
+            >
+              <option value="default">Default Order</option>
+              <option value="low-high">Price: Low to High</option>
+              <option value="high-low">Price: High to Low</option>
+            </select>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-          
-          <aside className="lg:col-span-1 bg-white border border-[#E2E8F0] rounded-3xl p-6 shadow-sm">
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#E2E8F0]">
-              <div className="flex items-center gap-2 font-bold text-[#0F172A]">
-                <Filter className="w-4 h-4 text-[#6366F1]" />
-                <span>Refine</span>
-              </div>
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none border-t border-gray-100 dark:border-zinc-800/80">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
+            <SlidersHorizontal className="w-3.5 h-3.5" /> Categories:
+          </span>
+          {categories.map((cat) => {
+            const isActive = selectedCategory === cat;
+            return (
               <button
-                onClick={handleReset}
-                className="text-xs font-semibold text-[#64748B] hover:text-[#6366F1] transition-colors flex items-center gap-1"
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105'
+                    : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
+                }`}
               >
-                <X className="w-3.5 h-3.5" /> Reset
+                {cat}
               </button>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">
-                Search by name
-              </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <input
-                  type="text"
-                  placeholder="e.g. Quiet Pod"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-[#6366F1] transition-colors"
-                />
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-3">
-                Amenities
-              </label>
-              <div className="space-y-2.5">
-                {amenitiesList.map((amenity, idx) => (
-                  <label key={idx} className="flex items-center gap-3 text-sm text-zinc-700 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={selectedAmenities.includes(amenity)}
-                      onChange={() => handleAmenityChange(amenity)}
-                      className="w-4 h-4 rounded border-zinc-300 text-[#6366F1] focus:ring-[#6366F1]"
-                    />
-                    <span>{amenity}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-[#64748B] mb-2">
-                Max Hourly Rate ($)
-              </label>
-              <input
-                type="number"
-                placeholder="e.g. 20"
-                value={maxPrice}
-                onChange={(e) => {
-                  setMaxPrice(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:border-[#6366F1] transition-colors"
-              />
-            </div>
-          </aside>
-
-          <main className="lg:col-span-3">
-            
-            <div className="mb-6 text-sm font-medium text-[#64748B]">
-              Showing <span className="text-[#0F172A] font-bold">{filteredRooms.length > 0 ? indexOfFirstItem + 1 : 0}</span>-
-              <span className="text-[#0F172A] font-bold">{Math.min(indexOfLastItem, filteredRooms.length)}</span> of {filteredRooms.length} rooms
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1, 2, 3, 4, 5, 6].map((n) => (
-                  <div key={n} className="bg-white rounded-3xl p-4 h-96 animate-pulse border border-[#E2E8F0]">
-                    <div className="bg-zinc-200 h-48 rounded-2xl w-full mb-4"></div>
-                    <div className="bg-zinc-200 h-6 rounded w-3/4 mb-2"></div>
-                    <div className="bg-zinc-200 h-4 rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : currentRooms.length === 0 ? (
-              <div className="text-center py-20 bg-white rounded-3xl border border-[#E2E8F0]">
-                <p className="text-base font-semibold text-[#0F172A]">No rooms match your filter criteria.</p>
-                <button
-                  onClick={handleReset}
-                  className="mt-4 px-4 py-2 bg-[#6366F1] text-white text-xs font-semibold rounded-xl"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-                  {currentRooms.map((room) => (
-                    <div
-                      key={room._id}
-                      className="bg-white border border-[#E2E8F0] rounded-3xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
-                    >
-                      <div>
-                        <div className="relative h-48 w-full rounded-2xl overflow-hidden bg-zinc-100 mb-4">
-                          <img
-                            src={room.images?.[0] || room.image || 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1000'}
-                            alt={room.title || room.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                          />
-                        </div>
-
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="text-lg font-bold text-[#0F172A] tracking-tight">
-                            {room.title || room.name}
-                          </h3>
-                          <span className="px-2.5 py-1 rounded-xl bg-[#EEF2FF] text-[#4F46E5] text-xs font-bold whitespace-nowrap">
-                            ${room.pricePerHour || room.price_per_hour}/hr
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-[#64748B] line-clamp-2 mb-4 leading-relaxed">
-                          {room.description}
-                        </p>
-
-                        <div className="grid grid-cols-2 gap-2 py-2.5 border-t border-b border-[#E2E8F0] text-xs font-medium text-[#64748B] mb-3">
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-[#6366F1]" />
-                            <span>{room.location || room.floor || 'Floor 1'}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Users className="w-3.5 h-3.5 text-[#6366F1]" />
-                            <span>{room.capacity} people</span>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1.5 mb-5">
-                          {room.amenities?.slice(0, 3).map((amenity, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-0.5 rounded-lg bg-zinc-50 border border-zinc-200 text-[11px] font-medium text-zinc-600"
-                            >
-                              {amenity}
-                            </span>
-                          ))}
-                          {room.amenities?.length > 3 && (
-                            <span className="px-2 py-0.5 rounded-lg bg-zinc-50 border border-zinc-200 text-[11px] font-medium text-zinc-500">
-                              +{room.amenities.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <Link
-                        href={`/rooms/${room._id}`}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-zinc-50 transition-colors"
-                      >
-                        <span>View Details</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-[#6366F1]" />
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center gap-2 py-4">
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 rounded-xl border border-[#E2E8F0] bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
-                      <button
-                        key={num}
-                        onClick={() => setCurrentPage(num)}
-                        className={`w-10 h-10 rounded-xl text-sm font-semibold transition-all ${
-                          currentPage === num
-                            ? 'bg-[#6366F1] text-white shadow-sm shadow-indigo-500/25'
-                            : 'bg-white border border-[#E2E8F0] text-zinc-700 hover:bg-zinc-50'
-                        }`}
-                      >
-                        {num}
-                      </button>
-                    ))}
-
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                      className="p-2 rounded-xl border border-[#E2E8F0] bg-white text-zinc-600 hover:bg-zinc-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-
-          </main>
-
+            );
+          })}
         </div>
 
       </div>
 
-      <Footer />
+      {/* Room Cards Grid */}
+      {currentRooms.length === 0 ? (
+        <div className="bg-gray-50 dark:bg-zinc-900 border border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl p-16 text-center text-gray-500 dark:text-zinc-400">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">No rooms found</h3>
+          <p className="text-sm">Try adjusting your search query or selected category filter.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {currentRooms.map((room) => (
+            <div
+              key={room._id}
+              className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
+            >
+              <div>
+                <div className="relative h-52 overflow-hidden bg-gray-100 dark:bg-zinc-800">
+                  <img
+                    src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
+                    alt={room.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                  <span className="absolute top-3.5 right-3.5 px-3.5 py-1.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md text-indigo-600 dark:text-indigo-400 text-xs font-extrabold rounded-full shadow-lg">
+                    ${room.pricePerHour} <span className="text-[10px] font-normal text-gray-500">/ hr</span>
+                  </span>
+                </div>
+
+                <div className="p-6">
+                  <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                    {room.category || 'Study Space'}
+                  </span>
+                  <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mt-1 mb-2 line-clamp-1">{room.title}</h3>
+                  <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 mb-3 font-medium">
+                    <MapPin className="w-3.5 h-3.5 text-indigo-600" /> {room.location}
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4">{room.description}</p>
+                </div>
+              </div>
+
+              <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-gray-100 dark:border-zinc-800/80 pt-4">
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 font-semibold">
+                  <Users className="w-4 h-4 text-indigo-600" /> {room.capacity} Seats
+                </div>
+                <Link
+                  href={`/rooms/${room._id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition"
+                >
+                  View Details <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modern Pagination Bar */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-12">
+          <button
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="p-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: totalPages }, (_, index) => {
+              const pageNumber = index + 1;
+              const isActive = currentPage === pageNumber;
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => setCurrentPage(pageNumber)}
+                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105'
+                      : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="p-2.5 rounded-xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }
