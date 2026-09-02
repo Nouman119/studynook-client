@@ -1,6 +1,13 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { 
+  signInWithPopup, 
+  setPersistence, 
+  browserLocalPersistence, 
+  inMemoryPersistence 
+} from 'firebase/auth';
+import { auth, googleProvider } from '@/firebase/firebase.config';
 
 const AuthContext = createContext(null);
 
@@ -11,7 +18,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // 1. Initial load directly from localStorage for instant UI sync
   useEffect(() => {
     try {
       const storedUser = localStorage.getItem('studynook_user');
@@ -24,7 +30,6 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
 
-    // 2. Validate session with server cookie in background
     checkUserStatus();
   }, []);
 
@@ -49,6 +54,61 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('studynook_user', JSON.stringify(userData));
   };
 
+  // Google Sign In integration (Configured with Persistence Fallback)
+  const googleLogin = async () => {
+    try {
+      // 1. ব্রাউজার স্টোরেজ অ্যাক্সেস নিশ্চিত করতে লোকাল পারসিস্টেন্স সেট করা
+      try {
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (persistenceErr) {
+        console.warn('Storage partitioned or blocked, falling back to inMemory:', persistenceErr);
+        await setPersistence(auth, inMemoryPersistence);
+      }
+
+      // 2. অ্যাকাউন্ট সিলেক্টর প্রম্পট কনফিগারেশন
+      googleProvider.setCustomParameters({
+        prompt: 'select_account',
+      });
+
+      // 3. পপ-আপ ট্রিগার
+      const result = await signInWithPopup(auth, googleProvider);
+      const firebaseUser = result.user;
+
+      // 4. ব্যাকএন্ডের সাথে ডেটা সিঙ্ক ও HttpOnly সেশন কুকি তৈরি
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: firebaseUser.email,
+          name: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+          isGoogleLogin: true,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        login(data.user);
+        await checkUserStatus();
+        return { success: true };
+      } else {
+        return { success: false, message: data.message || 'Google login failed' };
+      }
+    } catch (error) {
+      console.error('Google Auth Error:', error);
+      
+      // ইউজার ইচ্ছাকৃতভাবে পপ-আপ উইন্ডো ক্লোজ করলে এরর মেসেজ হ্যান্ডলিং
+      if (error.code === 'auth/popup-closed-by-user') {
+        return { success: false, message: 'Login cancelled. Popup closed.' };
+      }
+      return { success: false, message: error.message || 'Google authentication encountered an error.' };
+    }
+  };
+
   const logout = async () => {
     try {
       await fetch(`${API_BASE_URL}/api/auth/logout`, {
@@ -65,7 +125,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading, checkUserStatus }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading, checkUserStatus, googleLogin }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,10 +9,11 @@ import { useAuth } from '@/context/AuthContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, checkUserStatus } = useAuth() || {};
+  const { login, checkUserStatus, googleLogin } = useAuth() || {};
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // Handle user login form submission
@@ -22,7 +23,6 @@ export default function LoginPage() {
     setErrorMessage('');
 
     try {
-      // Strips trailing /api or / from env to prevent http://localhost:5000/api/api/... duplication
       const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
       const baseUrl = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
-        credentials: 'include', // Ensures the HttpOnly JWT cookie is stored
+        credentials: 'include',
       });
 
       const data = await res.json();
@@ -53,22 +53,38 @@ export default function LoginPage() {
     }
   };
 
-  // Handle Google OAuth login action
+  // Google Sign-In Action
   const handleGoogleLogin = async () => {
-    alert('Google login integration can be linked here.');
+    if (!googleLogin) return;
+    setGoogleLoading(true);
+    setErrorMessage('');
+
+    try {
+      const result = await googleLogin();
+      if (result.success) {
+        router.push('/');
+        router.refresh();
+      } else {
+        setErrorMessage(result.message || 'Google sign-in was unsuccessful.');
+      }
+    } catch (err) {
+      setErrorMessage('Failed to connect to Google.');
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#FAFAFB] text-[#0F172A] flex flex-col justify-between selection:bg-indigo-600 selection:text-white">
       
-      {/* Main Login Form Section with increased width */}
+      {/* Main Login Form Section */}
       <main className="flex-grow flex items-center justify-center px-4 sm:px-6 lg:px-8 py-16 bg-[#FAFAFB]">
         <div className="max-w-lg w-full bg-white border border-[#E2E8F0] rounded-3xl p-8 sm:p-12 shadow-sm relative overflow-hidden">
           
-          {/* Top accent bar matching brand indigo color */}
+          {/* Top accent bar */}
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-indigo-600"></div>
 
-          {/* Logo & Header Section */}
+          {/* Logo & Header */}
           <div className="flex flex-col items-center text-center mb-8">
             <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md mb-4">
               <BookOpen className="w-6 h-6" />
@@ -90,7 +106,6 @@ export default function LoginPage() {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Email Field */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-2">
                 Email
@@ -110,7 +125,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password Field */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-2">
                 Password
@@ -130,11 +144,10 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={loading || googleLoading}
+              className="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <span>{loading ? 'Logging in...' : 'Login'}</span>
               {!loading && <ArrowRight className="w-4 h-4" />}
@@ -155,7 +168,8 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-zinc-50 border border-[#E2E8F0] text-[#0F172A] text-sm font-semibold transition-all flex items-center justify-center gap-2.5 shadow-sm active:scale-95"
+            disabled={googleLoading || loading}
+            className="w-full py-3 px-4 rounded-xl bg-white hover:bg-zinc-50 border border-[#E2E8F0] text-[#0F172A] text-sm font-semibold transition-all flex items-center justify-center gap-2.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -175,7 +189,7 @@ export default function LoginPage() {
                 d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3.1 0-5.8-2.1-6.7-5.3L1.6 15.9C3.5 19.7 7.4 23 12 23z"
               />
             </svg>
-            <span>Continue with Google</span>
+            <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
           </button>
 
           {/* Footer Register Link */}
@@ -189,7 +203,6 @@ export default function LoginPage() {
         </div>
       </main>
 
-      {/* Footer Component */}
       <Footer />
     </div>
   );

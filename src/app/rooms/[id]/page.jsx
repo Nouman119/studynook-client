@@ -68,64 +68,75 @@ export default function RoomDetailsPage() {
     return basePrice * guestCount;
   };
 
-  const handleBookingSubmit = async (e) => {
+const handleBookingSubmit = async (e) => {
     e.preventDefault();
-    setSuccessMessage('');
     setErrorMessage('');
-
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    setSuccessMessage('');
 
     if (!bookingDate || !startTime || !endTime) {
-      setErrorMessage('Please select date and time slots.');
+      setErrorMessage('Please fill out all required date and time fields.');
       return;
     }
 
     try {
       setBookingLoading(true);
-      const bookingData = {
-        roomId: room._id,
-        roomTitle: room.title,
-        roomImage: room.images?.[0] || '',
-        pricePerHour: room.pricePerHour,
-        totalPrice: calculateTotal(),
+
+      // ১. নিরাপদ পদ্ধতিতে কুকি অথবা ব্রাউজার স্টোরেজ থেকে টোকেন বের করা
+      const getCookie = (name) => {
+        if (typeof document === 'undefined') return null;
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      };
+
+      const token =
+        getCookie('token') ||
+        getCookie('accessToken') ||
+        (typeof window !== 'undefined' ? (localStorage.getItem('token') || localStorage.getItem('accessToken')) : null);
+
+      // ২. বুকিং পেলোড প্রস্তুতকরণ
+      const bookingPayload = {
+        roomId: room?._id,
+        roomTitle: room?.title,
         date: bookingDate,
         startTime,
         endTime,
         guests: Number(guests),
-        userEmail: user.email,
-        userName: user.name || 'Scholar',
+        totalAmount: Number(calculateTotal()),
+        userEmail: user?.email,
+        userName: user?.name,
       };
 
+      // ৩. ব্যাকএন্ডে অথেন্টিকেটেড ফেচ রিকোয়েস্ট
       const res = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
+        credentials: 'include', // <-- সবচেয়ে গুরুত্বপূর্ণ: কুকি ব্যাকএন্ডে পাঠানোর জন্য
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}) // <-- টোকেন হেডার পাঠানোর জন্য
         },
-        body: JSON.stringify(bookingData),
+        body: JSON.stringify(bookingPayload),
       });
 
       const data = await res.json();
 
-      if (res.ok && data?.success) {
-        setSuccessMessage('Booking confirmed successfully!');
+      if (res.ok && data?.success !== false) {
+        setSuccessMessage('Workspace reservation confirmed successfully!');
         setTimeout(() => {
           setIsModalOpen(false);
-          router.push('/dashboard/my-bookings');
+          setSuccessMessage('');
         }, 1500);
       } else {
-        setErrorMessage(data?.message || 'Failed to book room. Try again.');
+        setErrorMessage(data?.message || 'Unauthorized access: No token provided');
       }
     } catch (error) {
-      console.error('Booking error:', error);
-      setErrorMessage('An unexpected error occurred.');
+      console.error('Booking submission error:', error);
+      setErrorMessage('A network error occurred while confirming booking.');
     } finally {
       setBookingLoading(false);
     }
   };
-
+  
   if (loading) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-zinc-950">
