@@ -15,7 +15,7 @@ export default function FeaturedRooms() {
         const baseUrl = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
         // রিকোয়ারমেন্ট অনুযায়ী ব্যাকএন্ডের sort() ও limit(6) করা ডেটা ফেচ
-        const res = await fetch(`${baseUrl}/api/featured-rooms`);
+        const res = await fetch(`${baseUrl}/api/rooms/featured-rooms`);
         const data = await res.json();
 
         if (data && data.success) {

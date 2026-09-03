@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import { AuthProvider } from '../context/AuthContext';
 import ToasterProvider from '../components/ToasterProvider';
 
+
 export const metadata = {
   title: {
     default: 'StudyNook – Study Room Booking Platform',
