@@ -32,7 +32,7 @@ export default function AllRoomsPage() {
   // Dynamic Browser Tab Title (Requirement: All Rooms Page)
  useEffect(() => {
     if (typeof window !== 'undefined') {
-      document.title = 'StudyNook – All Rooms';
+      document.title = 'StudyNook – Available Rooms';
     }
   }, []);
 

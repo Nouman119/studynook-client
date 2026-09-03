@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import { 
-  MapPin, Users, Calendar, ArrowLeft, ShieldCheck, 
-  Lock, Waves, Award, X, Plus, Minus, Layers, 
-  BookmarkCheck, Edit3, Trash2, AlertTriangle, Sparkles, DollarSign, Building, CheckSquare, Square
+  MapPin, Calendar, ArrowLeft, ShieldCheck, 
+  Lock, Waves, X, Layers, 
+  BookmarkCheck, Edit3, Trash2, AlertTriangle, Clock, FileText, CheckSquare, Square
 } from 'lucide-react';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -22,6 +22,12 @@ const requiredAmenities = [
   'Air Conditioning'
 ];
 
+const ALL_HOURLY_SLOTS = [
+  '08:00', '09:00', '10:00', '11:00', '12:00',
+  '13:00', '14:00', '15:00', '16:00', '17:00',
+  '18:00', '19:00', '20:00'
+];
+
 export default function RoomDetailsPage() {
   const { id } = useParams();
   const router = useRouter();
@@ -34,9 +40,9 @@ export default function RoomDetailsPage() {
   // Booking Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [bookingDate, setBookingDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [guests, setGuests] = useState(1);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [specialNote, setSpecialNote] = useState('');
 
   // Edit Modal State (Owner only)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -55,7 +61,12 @@ export default function RoomDetailsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  // Room details fetch
+  // Minimum date selectable (today)
+  const todayString = useMemo(() => {
+    const d = new Date();
+    return d.toISOString().split('T')[0];
+  }, []);
+
   const fetchRoomDetails = async () => {
     try {
       setLoading(true);
@@ -80,7 +91,7 @@ export default function RoomDetailsPage() {
     }
   }, [id]);
 
-  // Dynamic Browser Tab Title (Requirement: Dynamic title based on room)
+  // Dynamic Browser Tab Title
   useEffect(() => {
     if (room?.title) {
       document.title = `StudyNook – ${room.title}`;
@@ -94,47 +105,76 @@ export default function RoomDetailsPage() {
     (room?.creatorEmail && user?.email === room.creatorEmail)
   );
 
-  const handleIncrement = () => {
-    setGuests((prev) => {
-      const current = Number(prev) || 1;
-      const maxLimit = room?.capacity || 20;
-      return current < maxLimit ? current + 1 : current;
-    });
-  };
+  // Filter available End Times based on selected Start Time (Min 1 hour)
+  const availableEndTimes = useMemo(() => {
+    const startHour = parseInt(startTime.split(':')[0], 10);
+    const possibleEnds = [
+      '09:00', '10:00', '11:00', '12:00', '13:00',
+      '14:00', '15:00', '16:00', '17:00', '18:00',
+      '19:00', '20:00', '21:00'
+    ];
+    return possibleEnds.filter((slot) => parseInt(slot.split(':')[0], 10) > startHour);
+  }, [startTime]);
 
-  const handleDecrement = () => {
-    setGuests((prev) => {
-      const current = Number(prev) || 1;
-      return current > 1 ? current - 1 : 1;
-    });
-  };
+  // Auto-adjust End Time if Start Time changes past it
+  useEffect(() => {
+    const startHour = parseInt(startTime.split(':')[0], 10);
+    const endHour = parseInt(endTime.split(':')[0], 10);
+    if (endHour <= startHour) {
+      const nextHour = String(startHour + 1).padStart(2, '0') + ':00';
+      setEndTime(nextHour);
+    }
+  }, [startTime, endTime]);
 
-  const calculateTotal = () => {
-    const basePrice = room?.pricePerHour || 10;
-    const guestCount = Number(guests) || 1;
-    return basePrice * guestCount;
-  };
+  // Total Cost: (endHour - startHour) * hourlyRate
+  const totalCost = useMemo(() => {
+    const startHour = parseInt(startTime.split(':')[0], 10);
+    const endHour = parseInt(endTime.split(':')[0], 10);
+    const duration = Math.max(endHour - startHour, 1);
+    const hourlyRate = Number(room?.pricePerHour) || 0;
+    return duration * hourlyRate;
+  }, [startTime, endTime, room]);
 
   // Booking Submit Handler
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
 
-    if (!bookingDate || !startTime || !endTime) {
-      return toast.error('Please fill out all required date and time fields.');
+    if (!bookingDate) {
+      return toast.error('Please select a booking date.');
+    }
+
+    if (bookingDate < todayString) {
+      return toast.error('Booking date must be today or a future date.');
+    }
+
+    const startDateTime = new Date(`${bookingDate}T${startTime}:00`);
+    const endDateTime = new Date(`${bookingDate}T${endTime}:00`);
+
+    if (startDateTime >= endDateTime) {
+      return toast.error('End time must be after start time.');
     }
 
     try {
       setBookingLoading(true);
 
+      // Format date to Day Month Year (e.g., 15 Oct 2026)
+      const formattedDate = new Date(`${bookingDate}T00:00:00`).toLocaleDateString('en-GB', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+
       const bookingPayload = {
         roomId: room?._id,
         roomTitle: room?.title,
-        date: bookingDate,
-        startTime,
-        endTime,
-        guests: Number(guests),
-        totalPrice: Number(calculateTotal()),
-        price: Number(calculateTotal()),
+        rawDate: bookingDate,
+        date: formattedDate,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        timeSlot: `${startTime} - ${endTime}`,
+        totalPrice: totalCost,
+        price: totalCost,
+        specialNote: specialNote.trim(),
         userName: user?.name,
       };
 
@@ -152,10 +192,10 @@ export default function RoomDetailsPage() {
       if (res.ok && data?.success) {
         toast.success('Room booked successfully!');
         setIsModalOpen(false);
-        // রিফ্রেশ করে বুকিং কাউন্ট আপডেট নেওয়া
+        setSpecialNote('');
         fetchRoomDetails();
       } else {
-        toast.error(data?.message || 'Could not complete booking.');
+        toast.error(data?.message || 'Conflict detected! This time slot is already booked.');
       }
     } catch (error) {
       console.error('Booking submission error:', error);
@@ -165,7 +205,7 @@ export default function RoomDetailsPage() {
     }
   };
 
-  // Open Edit Modal with existing values
+  // Pre-fill fields for Owner Edit Modal
   const handleOpenEditModal = () => {
     setEditFormData({
       title: room.title || '',
@@ -292,7 +332,7 @@ export default function RoomDetailsPage() {
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
-        {/* Owner Controls (Edit & Delete buttons visible only for owner) */}
+        {/* Owner Controls */}
         {isOwner && (
           <div className="flex items-center gap-2">
             <button
@@ -320,7 +360,7 @@ export default function RoomDetailsPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
         
-        {/* Booking Count Badge (Requirement 4.3) */}
+        {/* Booking Count Badge */}
         <div className="absolute bottom-6 left-6 flex items-center gap-2">
           <span className="px-4 py-2 bg-white/95 backdrop-blur-md text-indigo-700 text-xs font-extrabold rounded-2xl shadow-lg flex items-center gap-1.5">
             <BookmarkCheck className="w-4 h-4 text-indigo-600" />
@@ -398,7 +438,7 @@ export default function RoomDetailsPage() {
           </div>
         </div>
 
-        {/* Right Column: Pricing & Booking Widget */}
+        {/* Right Column: Pricing & Booking Trigger */}
         <div className="lg:col-span-5 sticky top-24">
           <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
             <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -412,7 +452,6 @@ export default function RoomDetailsPage() {
               </div>
             </div>
 
-            {/* Requirement: If user is logged in -> Book Now, else -> Login to Book and redirect */}
             {user ? (
               <button
                 onClick={() => setIsModalOpen(true)}
@@ -430,7 +469,7 @@ export default function RoomDetailsPage() {
             )}
 
             <p className="text-center text-xs text-gray-400 font-medium">
-              Instant confirmation • No reservation fee
+              Instant confirmation • Automated Conflict Check
             </p>
           </div>
         </div>
@@ -444,7 +483,7 @@ export default function RoomDetailsPage() {
             
             <div className="flex items-center justify-between border-b border-gray-100 pb-4">
               <div>
-                <h3 className="text-xl font-extrabold text-gray-900">Reserve Study Space</h3>
+                <h3 className="text-xl font-extrabold text-gray-900">Book Study Space</h3>
                 <p className="text-xs text-gray-500 mt-0.5">{room.title}</p>
               </div>
               <button
@@ -456,88 +495,103 @@ export default function RoomDetailsPage() {
             </div>
 
             <form onSubmit={handleBookingSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 p-3.5 bg-gray-50 rounded-2xl border border-gray-100">
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Scholar</p>
-                  <p className="text-xs font-bold text-gray-800 truncate mt-0.5">{user?.name || 'Scholar'}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase">Email</p>
-                  <p className="text-xs font-bold text-gray-800 truncate mt-0.5">{user?.email}</p>
-                </div>
-              </div>
-
+              
+              {/* Date Picker (Min today) */}
               <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Booking Date *</label>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Booking Date *
+                </label>
                 <div className="relative">
                   <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="date"
+                    required
+                    min={todayString}
                     value={bookingDate}
                     onChange={(e) => setBookingDate(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                    required
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium"
                   />
                 </div>
               </div>
 
+              {/* Start & End Times */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Start Time *</label>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                    required
-                  />
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    Start Time *
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium cursor-pointer"
+                    >
+                      {ALL_HOURLY_SLOTS.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">End Time *</label>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600"
-                    required
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">Number of Seats</label>
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
-                  <span className="text-sm font-semibold text-gray-700">{guests} Seat(s)</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleDecrement}
-                      className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                    End Time *
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 font-medium cursor-pointer"
                     >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleIncrement}
-                      className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
+                      {availableEndTimes.map((slot) => (
+                        <option key={slot} value={slot}>
+                          {slot}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 flex justify-between items-center text-xs">
-                <span className="font-bold text-slate-600">Total Price:</span>
-                <span className="text-base font-extrabold text-indigo-700">${calculateTotal()}</span>
+              {/* Special Note */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 uppercase mb-1">
+                  Special Note (Optional)
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-400" />
+                  <textarea
+                    rows="2"
+                    value={specialNote}
+                    onChange={(e) => setSpecialNote(e.target.value)}
+                    placeholder="e.g., Requesting whiteboard markers or quiet study setup..."
+                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 resize-none font-medium"
+                  />
+                </div>
               </div>
 
+              {/* Total Cost Calculation */}
+              <div className="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex justify-between items-center text-xs">
+                <div>
+                  <span className="font-bold text-slate-700 block">Total Cost</span>
+                  <span className="text-[11px] text-slate-500">
+                    {parseInt(endTime.split(':')[0], 10) - parseInt(startTime.split(':')[0], 10)} hr(s) × ${room.pricePerHour || 5}/hr
+                  </span>
+                </div>
+                <span className="text-xl font-extrabold text-indigo-700">${totalCost}</span>
+              </div>
+
+              {/* Confirm Booking */}
               <button
                 type="submit"
                 disabled={bookingLoading}
                 className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-2xl shadow-lg shadow-indigo-600/25 transition disabled:opacity-50 text-sm cursor-pointer"
               >
-                {bookingLoading ? 'Reserving...' : 'Confirm Booking'}
+                {bookingLoading ? 'Checking Conflict & Reserving...' : 'Confirm Booking'}
               </button>
             </form>
 
@@ -669,7 +723,7 @@ export default function RoomDetailsPage() {
         </div>
       )}
 
-      {/* Owner Delete Confirmation Modal */}
+      {/* Owner Delete Modal */}
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 text-center">

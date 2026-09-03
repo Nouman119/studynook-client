@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { 
-  Users, Trash2, Plus, ArrowLeft, 
+import {
+  Users, Trash2, Plus, ArrowLeft,
   Sparkles, Building2, Search, Edit3, X, Check, DollarSign, Image as ImageIcon,
   AlignLeft, Building, Layers, CheckSquare, Square, AlertTriangle
 } from 'lucide-react';
@@ -196,7 +196,7 @@ export default function MyListingsPage() {
 
   const safeSearch = (searchTerm || '').toLowerCase().trim();
   const safeListings = Array.isArray(listings) ? listings : [];
-  
+
   const filteredListings = safeListings.filter((item) => {
     if (!item) return false;
     const title = String(item.title || '').toLowerCase();
@@ -215,7 +215,7 @@ export default function MyListingsPage() {
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8 font-sans text-slate-800">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -235,7 +235,7 @@ export default function MyListingsPage() {
           </div>
 
           <Link
-            href="/add-room"
+            href="/rooms/add"
             className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-extrabold rounded-2xl shadow-lg shadow-indigo-600/20 transition cursor-pointer w-fit"
           >
             <Plus className="w-4 h-4" /> Add New Room
@@ -255,7 +255,7 @@ export default function MyListingsPage() {
               </p>
             </div>
             <Link
-              href="/add-room"
+              href="/rooms/add"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs transition cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create First Listing
@@ -263,7 +263,7 @@ export default function MyListingsPage() {
           </div>
         ) : (
           <div className="bg-white border border-slate-100 rounded-[2rem] shadow-sm overflow-hidden">
-            
+
             {/* Search Filter Strip */}
             <div className="p-4 sm:p-5 border-b border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 bg-white">
               <div className="relative w-full sm:w-80">
@@ -301,8 +301,8 @@ export default function MyListingsPage() {
                       'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=300&q=80';
 
                     return (
-                      <tr 
-                        key={room._id} 
+                      <tr
+                        key={room._id}
                         className="hover:bg-slate-50/70 transition group"
                       >
                         <td className="py-4 px-6">
@@ -379,7 +379,7 @@ export default function MyListingsPage() {
       {deleteModalOpen && selectedRoomToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white border border-slate-100 rounded-3xl shadow-2xl max-w-md w-full p-6 text-center">
-            
+
             <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mx-auto mb-4 border border-red-100">
               <AlertTriangle className="w-6 h-6" />
             </div>
@@ -425,7 +425,7 @@ export default function MyListingsPage() {
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
           <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 relative">
-            
+
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-6">
               <div>
                 <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold mb-1 border border-indigo-100">
@@ -525,11 +525,10 @@ export default function MyListingsPage() {
                         <div
                           key={amenity}
                           onClick={() => toggleEditAmenity(amenity)}
-                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition select-none ${
-                            isSelected
-                              ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                              : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:border-slate-300'
-                          }`}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-xs font-semibold cursor-pointer transition select-none ${isSelected
+                            ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                            : 'bg-slate-50/60 border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
                         >
                           {isSelected ? (
                             <CheckSquare className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
