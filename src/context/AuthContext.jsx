@@ -54,10 +54,49 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('studynook_user', JSON.stringify(userData));
   };
 
-  // Google Sign In integration (Configured with Persistence Fallback)
+  // ইমেইল ও পাসওয়ার্ড দিয়ে সাধারণ লগইন
+const loginUser = async (email, password) => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ email, password }),
+      });
+
+      // ব্যাকএন্ড স্ট্যাটাস কোড 401 বা 400 হলেও JSON ডাটা রিড করা
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (err) {
+        console.error('Failed to parse response JSON:', err);
+      }
+
+      if (res.ok && data?.success) {
+        login(data.user);
+        return { success: true };
+      } else {
+        // ব্যাকএন্ডের পাঠানো message অথবা ডিফল্ট মেসেজ
+        return { 
+          success: false, 
+          message: data?.message || 'Invalid email or password' 
+        };
+      }
+    } catch (error) {
+      console.error('Login network error:', error);
+      return { 
+        success: false, 
+        message: 'Could not connect to server. Please try again.' 
+      };
+    }
+  };
+
+  
+  // Google Sign In integration
   const googleLogin = async () => {
     try {
-      // 1. ব্রাউজার স্টোরেজ অ্যাক্সেস নিশ্চিত করতে লোকাল পারসিস্টেন্স সেট করা
       try {
         await setPersistence(auth, browserLocalPersistence);
       } catch (persistenceErr) {
@@ -65,16 +104,13 @@ export const AuthProvider = ({ children }) => {
         await setPersistence(auth, inMemoryPersistence);
       }
 
-      // 2. অ্যাকাউন্ট সিলেক্টর প্রম্পট কনফিগারেশন
       googleProvider.setCustomParameters({
         prompt: 'select_account',
       });
 
-      // 3. পপ-আপ ট্রিগার
       const result = await signInWithPopup(auth, googleProvider);
       const firebaseUser = result.user;
 
-      // 4. ব্যাকএন্ডের সাথে ডেটা সিঙ্ক ও HttpOnly সেশন কুকি তৈরি
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -100,8 +136,7 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Google Auth Error:', error);
-      
-      // ইউজার ইচ্ছাকৃতভাবে পপ-আপ উইন্ডো ক্লোজ করলে এরর মেসেজ হ্যান্ডলিং
+
       if (error.code === 'auth/popup-closed-by-user') {
         return { success: false, message: 'Login cancelled. Popup closed.' };
       }
@@ -125,7 +160,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, loading, checkUserStatus, googleLogin }}>
+    <AuthContext.Provider 
+      value={{ 
+        user, 
+        setUser, 
+        login, 
+        loginUser,
+        logout, 
+        loading, 
+        checkUserStatus, 
+        googleLogin,
+        googleSignIn: googleLogin // দুটি নামই সাপোর্ট করবে
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
