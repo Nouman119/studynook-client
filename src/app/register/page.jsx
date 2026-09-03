@@ -1,15 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, User, Mail, Image as ImageIcon, Lock, ArrowRight } from 'lucide-react';
+import { BookOpen, User, Mail, Image as ImageIcon, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { login, checkUserStatus, googleLogin } = useAuth() || {};
+  const { googleLogin, user } = useAuth() || {};
 
   const [formData, setFormData] = useState({
     name: '',
@@ -20,29 +21,72 @@ export default function RegisterPage() {
 
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  // Dynamic Browser Tab Title (Requirement)
+  useEffect(() => {
+    document.title = 'StudyNook – Register';
+  }, []);
+
+  // ইউজার আগে থেকেই লগইন থাকলে হোম পেজে পাঠিয়ে দেওয়া
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  // পাসওয়ার্ড ভ্যালিডেশন লজিক (৬ অক্ষর + অন্তত ১টি Uppercase + অন্তত ১টি Lowercase)
+  const validatePassword = (pass) => {
+    if (pass.length < 6) {
+      return 'Password must be at least 6 characters long.';
+    }
+    if (!/[A-Z]/.test(pass)) {
+      return 'Password must contain at least one uppercase letter.';
+    }
+    if (!/[a-z]/.test(pass)) {
+      return 'Password must contain at least one lowercase letter.';
+    }
+    return '';
   };
 
-  // সাধারণ ইমেইল-পাসওয়ার্ড দিয়ে রেজিস্ট্রেশন হ্যান্ডলার
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // পাসওয়ার্ড ফিল্ডে টাইপ করার সাথে সাথে ইনলাইন ভ্যালিডেশন
+    if (name === 'password') {
+      if (value) {
+        setPasswordError(validatePassword(value));
+      } else {
+        setPasswordError('');
+      }
+    }
+  };
+
+  // ইমেইল ফরম্যাট চেক
+  const isValidEmail = (val) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  };
+
+  // সাবমিট হ্যান্ডলার
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMessage('');
-    setSuccessMessage('');
 
-    // পাসওয়ার্ড ভ্যালিডেশন (কমপক্ষে ৬ ডিজিট)
-    if (formData.password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
-      setLoading(false);
-      return;
+    if (!formData.name.trim()) return toast.error('Please enter your full name');
+    if (!isValidEmail(formData.email.trim())) return toast.error('Please enter a valid email address');
+    if (!formData.photoURL.trim()) return toast.error('Please enter your photo URL');
+
+    // সাবমিশনের ঠিক আগে পাসওয়ার্ড কঠোরভাবে চেক করা
+    const passErr = validatePassword(formData.password);
+    if (passErr) {
+      setPasswordError(passErr);
+      return; // শর্ত ভঙ্গ হলে ফর্ম সাবমিট হতে দেবে না
     }
+
+    setLoading(true);
 
     try {
       const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -53,45 +97,52 @@ export default function RegisterPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          photoURL: formData.photoURL.trim(),
+          password: formData.password,
+        }),
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        console.error('Failed to parse json', parseErr);
+      }
 
       if (res.ok && data.success) {
-        setSuccessMessage('Registration successful! Redirecting to login...');
-        setTimeout(() => {
-          router.push('/login');
-        }, 1500);
+        // রিকোয়ারমেন্ট অনুযায়ী নির্দিষ্ট টোস্ট মেসেজ
+        toast.success('Registration successful! Please login.');
+        router.push('/login');
       } else {
-        setErrorMessage(data.message || 'Registration failed. Please try again.');
+        toast.error(data.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setErrorMessage('Something went wrong. Please check your network.');
+      toast.error('Network error. Could not complete registration.');
     } finally {
       setLoading(false);
     }
   };
 
-  // গুগল দিয়ে রেজিস্ট্রেশন/লগইন হ্যান্ডলার (পিডিএফ অনুযায়ী সরাসরি হোম পেজে যাবে)
+  // গুগল সাইন-আপ হ্যান্ডলার (সরাসরি হোম পেজে নিয়ে যাবে)
   const handleGoogleRegister = async () => {
     if (!googleLogin) return;
     setGoogleLoading(true);
-    setErrorMessage('');
 
     try {
       const result = await googleLogin();
       if (result.success) {
-        // সফল হলে সরাসরি হোম পেজে রিডাইরেক্ট
+        toast.success('Signed in with Google successfully!');
         router.push('/');
-        router.refresh();
       } else {
-        setErrorMessage(result.message || 'Google registration was unsuccessful.');
+        toast.error(result.message || 'Google registration was unsuccessful.');
       }
     } catch (err) {
       console.error('Google register error:', err);
-      setErrorMessage('Failed to connect to Google.');
+      toast.error('Failed to connect to Google.');
     } finally {
       setGoogleLoading(false);
     }
@@ -120,21 +171,8 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          {/* নোটিফিকেশন মেসেজ */}
-          {errorMessage && (
-            <div className="mb-6 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-xs font-semibold text-center">
-              {errorMessage}
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-6 p-3.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-semibold text-center">
-              {successMessage}
-            </div>
-          )}
-
           {/* রেজিস্ট্রেশন ফর্ম */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
             {/* Name */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-1.5">
@@ -187,8 +225,9 @@ export default function RegisterPage() {
                   <ImageIcon className="w-4 h-4" />
                 </div>
                 <input
-                  type="url"
+                  type="text"
                   name="photoURL"
+                  required
                   value={formData.photoURL}
                   onChange={handleChange}
                   placeholder="https://example.com/avatar.jpg"
@@ -197,7 +236,7 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Password */}
+            {/* Password with Inline Error */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-1.5">
                 Password
@@ -212,16 +251,32 @@ export default function RegisterPage() {
                   required
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="•••••••• (Min. 6 chars)"
-                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] placeholder-zinc-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition-all"
+                  placeholder="••••••••"
+                  className={`w-full pl-10 pr-4 py-2.5 bg-white border rounded-xl text-sm text-[#0F172A] placeholder-zinc-400 focus:outline-none transition-all ${
+                    passwordError
+                      ? 'border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                      : 'border-[#E2E8F0] focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600'
+                  }`}
                 />
               </div>
+
+              {/* Requirement: Inline error message */}
+              {passwordError ? (
+                <p className="flex items-center gap-1.5 text-xs text-red-500 mt-2 font-medium">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{passwordError}</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-[#64748B] mt-1.5">
+                  Must be at least 6 characters with uppercase and lowercase letters.
+                </p>
+              )}
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || googleLoading}
+              disabled={loading || googleLoading || !!passwordError}
               className="w-full mt-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               <span>{loading ? 'Creating account...' : 'Register'}</span>
@@ -229,7 +284,7 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          {/* ডেকোরেটিভ ডিভাইডার */}
+          {/* Decorative Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-[#E2E8F0]"></div>
@@ -239,7 +294,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Continue with Google বাটন */}
+          {/* Continue with Google Button */}
           <button
             type="button"
             onClick={handleGoogleRegister}
@@ -267,7 +322,7 @@ export default function RegisterPage() {
             <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
           </button>
 
-          {/* ফুটার লগইন লিংক */}
+          {/* Footer Login Link */}
           <p className="text-center text-xs text-[#64748B] mt-6">
             Already have an account?{' '}
             <Link href="/login" className="font-bold text-indigo-600 hover:underline">

@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  MapPin, 
-  Users, 
-  Layers, 
-  SlidersHorizontal, 
-  ArrowRight, 
-  Sparkles, 
-  ChevronLeft, 
-  ChevronRight 
+import {
+  Search,
+  MapPin,
+  Users,
+  Layers,
+  SlidersHorizontal,
+  ArrowRight,
+  Sparkles,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -29,9 +29,11 @@ export default function AllRoomsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  // Dynamic Browser Tab Title (Requirements)
-  useEffect(() => {
-    document.title = 'StudyNook – Available Rooms';
+  // Dynamic Browser Tab Title (Requirement: All Rooms Page)
+ useEffect(() => {
+    if (typeof window !== 'undefined') {
+      document.title = 'StudyNook – All Rooms';
+    }
   }, []);
 
   const fetchRooms = async () => {
@@ -65,6 +67,8 @@ export default function AllRoomsPage() {
         const query = searchQuery.toLowerCase();
         const matchesSearch =
           room.title?.toLowerCase().includes(query) ||
+          room.description?.toLowerCase().includes(query) ||
+          room.floor?.toLowerCase().includes(query) ||
           room.location?.toLowerCase().includes(query);
         const matchesCategory =
           selectedCategory === 'All' || room.category === selectedCategory;
@@ -101,7 +105,7 @@ export default function AllRoomsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 bg-white dark:bg-zinc-950 min-h-screen text-[#0F172A] dark:text-white">
-      
+
       {/* Page Header */}
       <div className="mb-8 text-center max-w-2xl mx-auto">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 text-xs font-bold mb-3 border border-indigo-100 dark:border-zinc-800">
@@ -113,13 +117,13 @@ export default function AllRoomsPage() {
 
       {/* Horizontal Filter & Search Bar */}
       <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl border border-gray-100 dark:border-zinc-800 rounded-3xl p-4 sm:p-5 shadow-xl shadow-zinc-100 dark:shadow-none mb-10 space-y-4">
-        
+
         <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
           <div className="relative w-full md:w-[420px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by room title or location..."
+              placeholder="Search by room title, floor, or description..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-11 pr-4 py-3 bg-gray-50/80 dark:bg-zinc-800/80 border border-gray-200 dark:border-zinc-700 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition"
@@ -141,31 +145,32 @@ export default function AllRoomsPage() {
         </div>
 
         {/* Category Filter Chips */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none border-t border-gray-100 dark:border-zinc-800/80">
-          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
-            <SlidersHorizontal className="w-3.5 h-3.5" /> Categories:
-          </span>
-          {categories.map((cat) => {
-            const isActive = selectedCategory === cat;
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105'
-                    : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
-                }`}
-              >
-                {cat}
-              </button>
-            );
-          })}
-        </div>
+        {categories.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none border-t border-gray-100 dark:border-zinc-800/80">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5" /> Categories:
+            </span>
+            {categories.map((cat) => {
+              const isActive = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${isActive
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105'
+                      : 'bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-200 dark:hover:bg-zinc-700'
+                    }`}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
       </div>
 
-      {/* Room Cards Grid */}
+      {/* Room Cards Grid (Uniform aspect ratio & size) */}
       {currentRooms.length === 0 ? (
         <div className="bg-gray-50 dark:bg-zinc-900 border border-dashed border-gray-200 dark:border-zinc-800 rounded-3xl p-16 text-center text-gray-500 dark:text-zinc-400">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">No rooms found</h3>
@@ -177,6 +182,7 @@ export default function AllRoomsPage() {
             const amenities = room.amenities || [];
             const visibleAmenities = amenities.slice(0, 3);
             const extraCount = amenities.length - 3;
+            const thumbnail = room.image || room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80';
 
             return (
               <div
@@ -186,7 +192,7 @@ export default function AllRoomsPage() {
                 <div>
                   <div className="relative h-52 overflow-hidden bg-gray-100 dark:bg-zinc-800">
                     <img
-                      src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
+                      src={thumbnail}
                       alt={room.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
                     />
@@ -203,24 +209,24 @@ export default function AllRoomsPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Layers className="w-3 h-3 text-indigo-500" />
-                        {room.floor || 'Floor 1'}
+                        {room.floor || '1st Floor'}
                       </span>
                     </div>
 
                     <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-2 line-clamp-1">
                       {room.title}
                     </h3>
-                    
+
                     <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 mb-3 font-medium">
-                      <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> 
-                      <span className="truncate">{room.location}</span>
+                      <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span className="truncate">{room.location || room.floor || 'Campus Library'}</span>
                     </p>
 
                     <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4">
                       {room.description}
                     </p>
 
-                    {/* Amenities Chips */}
+                    {/* Amenities Chips with +X more */}
                     {amenities.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
                         {visibleAmenities.map((amenity, idx) => (
@@ -277,11 +283,10 @@ export default function AllRoomsPage() {
                 <button
                   key={pageNumber}
                   onClick={() => setCurrentPage(pageNumber)}
-                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isActive
+                  className={`w-10 h-10 rounded-xl text-xs font-bold transition-all cursor-pointer ${isActive
                       ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/25 scale-105'
                       : 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 text-gray-600 dark:text-zinc-300 hover:bg-gray-50 dark:hover:bg-zinc-800'
-                  }`}
+                    }`}
                 >
                   {pageNumber}
                 </button>
