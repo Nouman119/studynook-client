@@ -4,6 +4,7 @@ import Hero from '@/components/Hero';
 import AvailableRooms from '@/components/AvailableRooms';
 import WhyStudyNook from '@/components/WhyStudyNook';
 import HowItWorks from '@/components/HowItWorks';
+import FeaturedRooms from '@/components/FeaturedRooms';
 import Footer from '@/components/Footer';
 
 export default function HomePage() {
@@ -13,6 +14,7 @@ export default function HomePage() {
       <AvailableRooms />
       <WhyStudyNook />
       <HowItWorks />
+      <FeaturedRooms />
       <Footer />
       <room />
     </main>
