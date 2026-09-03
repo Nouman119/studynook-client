@@ -112,7 +112,7 @@ export default function AddRoomPage() {
           description: '',
           amenities: []
         });
-        router.push('/dashboard/my-listings');
+        router.push('/my-listings');
       } else {
         toast.error(data?.message || 'Failed to add room.');
       }

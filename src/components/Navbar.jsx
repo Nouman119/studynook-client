@@ -39,7 +39,7 @@ export default function Navbar() {
     ...(user
       ? [
           { name: 'Add Room', href: '/add-room' },
-          { name: 'My Listings', href: '/dashboard/my-listings' },
+          { name: 'My Listings', href: '/my-listings' },
           { name: 'My Bookings', href: '/my-bookings' },
         ]
       : []),
@@ -118,7 +118,7 @@ export default function Navbar() {
                       {/* Dropdown Links */}
                       <div className="flex flex-col gap-1 py-1">
                         <Link
-                          href="/rooms/add"
+                          href="/add-room"
                           onClick={() => setIsDropdownOpen(false)}
                           className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-[#334155] dark:text-zinc-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-zinc-800/80 rounded-xl transition-colors"
                         >
@@ -126,7 +126,7 @@ export default function Navbar() {
                           Add Room
                         </Link>
                         <Link
-                          href="/dashboard/my-listings"
+                          href="/my-listings"
                           onClick={() => setIsDropdownOpen(false)}
                           className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-[#334155] dark:text-zinc-300 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-zinc-800/80 rounded-xl transition-colors"
                         >

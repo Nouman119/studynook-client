@@ -56,7 +56,7 @@ export default function MyListingsPage() {
 
   useEffect(() => {
     if (!authLoading && !user) {
-      router.push('/login?from=/dashboard/my-listings');
+      router.push('/login?from=/my-listings');
     } else if (user) {
       fetchMyListings();
     }
@@ -65,7 +65,7 @@ export default function MyListingsPage() {
   const fetchMyListings = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE_URL}/api/my-rooms`, {
+      const res = await fetch(`${API_BASE_URL}/api/rooms/my-rooms`, {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -235,7 +235,7 @@ export default function MyListingsPage() {
           </div>
 
           <Link
-            href="/rooms/add"
+            href="/add-room"
             className="inline-flex items-center justify-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-extrabold rounded-2xl shadow-lg shadow-indigo-600/20 transition cursor-pointer w-fit"
           >
             <Plus className="w-4 h-4" /> Add New Room
