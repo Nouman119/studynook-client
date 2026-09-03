@@ -2,161 +2,182 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Users, Layers, ArrowRight } from 'lucide-react';
+import { ArrowRight, Users, Layers, MapPin } from 'lucide-react';
 
 export default function FeaturedRooms() {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchFeatured = async () => {
+    async function getFeaturedRooms() {
       try {
         const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
         const baseUrl = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
+        // রিকোয়ারমেন্ট অনুযায়ী ব্যাকএন্ডের sort() ও limit(6) করা ডেটা ফেচ
         const res = await fetch(`${baseUrl}/api/featured-rooms`);
         const data = await res.json();
-        if (data.success) {
-          setRooms(data.data);
+
+        if (data && data.success) {
+          setRooms(data.data || []);
+        } else if (Array.isArray(data)) {
+          setRooms(data);
         }
       } catch (err) {
-        console.error('Error fetching featured rooms:', err);
+        console.error('Failed to fetch featured rooms:', err);
       } finally {
         setLoading(false);
       }
-    };
+    }
 
-    fetchFeatured();
+    getFeaturedRooms();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
-        <p className="text-xs text-slate-500 mt-3 font-medium">Loading available study rooms...</p>
-      </div>
-    );
-  }
-
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Section Header */}
-      <div className="text-center max-w-2xl mx-auto mb-12">
-        <span className="text-xs font-bold uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">
-          Featured Spaces
-        </span>
-        <h2 className="text-3xl font-extrabold text-slate-900 mt-3 tracking-tight">
-          Available Study Rooms
-        </h2>
-        <p className="text-slate-600 text-sm mt-2">
-          Discover quiet, fully-equipped study spaces designed for focused learning and collaboration.
-        </p>
-      </div>
+    <section className="py-24 bg-gradient-to-b from-[#EEF2FF]/60 via-white to-[#FAFAFB] relative overflow-hidden">
+      {/* Decorative Blur Elements */}
+      <div className="absolute top-1/3 right-0 w-96 h-96 bg-indigo-100/50 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-10 left-10 w-80 h-80 bg-sky-100/40 rounded-full blur-3xl pointer-events-none"></div>
 
-      {/* Grid Layout: 3 col desktop, 2 tablet, 1 mobile */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {rooms.map((room) => {
-          // Truncate description to ~100 characters
-          const truncatedDesc =
-            room.description?.length > 100
-              ? `${room.description.slice(0, 100)}...`
-              : room.description || 'Comfortable and fully-equipped study environment.';
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        
+        {/* Section Header */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-wider text-[#6366F1] bg-white px-3.5 py-1.5 rounded-full border border-indigo-100 shadow-2xs">
+              Explore Spaces
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0F172A] mt-4">
+              Featured Study Rooms
+            </h2>
+            <p className="mt-2 text-base text-[#64748B] max-w-2xl">
+              Find the perfect environment for your academic focus. Discover our top-rated quiet spaces and essential amenities.
+            </p>
+          </div>
+          <Link
+            href="/rooms"
+            className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0F172A] hover:bg-zinc-800 transition-colors shadow-sm self-start md:self-auto"
+          >
+            View All Rooms
+          </Link>
+        </div>
 
-          // Amenities chips (max 3, rest as +X more)
-          const amenities = room.amenities || [];
-          const visibleAmenities = amenities.slice(0, 3);
-          const extraCount = amenities.length - 3;
-
-          const imageSrc =
-            room.images?.[0] ||
-            room.image ||
-            'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=800&q=80';
-
-          return (
-            <div
-              key={room._id}
-              className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col h-full group"
-            >
-              {/* Room Image - uniform size, object-fit cover */}
-              <div className="relative w-full h-52 bg-slate-100 overflow-hidden">
-                <img
-                  src={imageSrc}
-                  alt={room.title || 'Study Room'}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <span className="absolute top-3 right-3 bg-white/95 backdrop-blur-md px-3 py-1 rounded-full text-xs font-extrabold text-indigo-600 shadow-sm">
-                  ${room.pricePerHour || room.hourlyRate || 5}/hr
-                </span>
-              </div>
-
-              {/* Card Body */}
-              <div className="p-5 flex flex-col flex-grow justify-between">
+        {/* Loading State Skeleton */}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="bg-white/80 backdrop-blur-md rounded-3xl p-5 h-96 animate-pulse border border-[#E2E8F0] flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 mb-2 font-medium">
-                    <span className="flex items-center gap-1">
-                      <Layers className="w-3.5 h-3.5 text-slate-400" />
-                      {room.floor || 'Floor 1'}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5 text-slate-400" />
-                      {room.capacity ? `${room.capacity} seats` : '2–4 people'}
-                    </span>
-                  </div>
-
-                  {/* Room Name */}
-                  <h3 className="text-lg font-bold text-slate-900 line-clamp-1 group-hover:text-indigo-600 transition-colors">
-                    {room.title || room.name}
-                  </h3>
-
-                  {/* Short Description */}
-                  <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                    {truncatedDesc}
-                  </p>
-
-                  {/* Amenities Chips */}
-                  <div className="flex flex-wrap gap-1.5 mt-4">
-                    {visibleAmenities.map((item, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-slate-100 text-slate-700 text-[11px] font-medium px-2.5 py-0.5 rounded-md"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                    {extraCount > 0 && (
-                      <span className="bg-indigo-50 text-indigo-600 text-[11px] font-semibold px-2 py-0.5 rounded-md">
-                        +{extraCount} more
-                      </span>
-                    )}
-                  </div>
+                  <div className="bg-zinc-200 h-48 rounded-2xl w-full mb-4"></div>
+                  <div className="bg-zinc-200 h-6 rounded w-3/4 mb-2"></div>
+                  <div className="bg-zinc-200 h-4 rounded w-1/2 mb-4"></div>
                 </div>
+                <div className="bg-zinc-200 h-10 rounded-xl w-full"></div>
+              </div>
+            ))}
+          </div>
+        ) : rooms.length === 0 ? (
+          <div className="text-center py-12 bg-white/80 backdrop-blur-md rounded-3xl border border-[#E2E8F0]">
+            <p className="text-[#64748B] text-sm font-medium">No study rooms found in the database yet.</p>
+          </div>
+        ) : (
+          /* Room Cards Grid (3 cols desktop, 2 cols tablet, 1 col mobile) */
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {rooms.map((room) => {
+              // ট্রাঙ্কেট ডেসক্রিপশন (~১০০ ক্যারেক্টার)
+              const desc = room.description || '';
+              const shortDesc = desc.length > 100 ? `${desc.slice(0, 100)}...` : desc;
 
-                {/* View Details Button */}
-                <div className="mt-6 pt-4 border-t border-slate-100">
+              // Amenities চিপস রুল: সর্বোচ্চ ৩টি + বাকিগুলো '+X more'
+              const amenities = room.amenities || [];
+              const visibleAmenities = amenities.slice(0, 3);
+              const remainingCount = amenities.length - 3;
+
+              const imageSrc =
+                room.images?.[0] ||
+                room.image ||
+                'https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1000';
+
+              return (
+                <div
+                  key={room._id}
+                  className="bg-white/90 backdrop-blur-md border border-indigo-50/80 rounded-3xl p-5 shadow-[0_10px_30px_-10px_rgba(99,102,241,0.08)] hover:shadow-[0_20px_40px_-15px_rgba(99,102,241,0.15)] hover:border-indigo-200 transition-all duration-300 flex flex-col justify-between group h-full"
+                >
+                  <div>
+                    {/* Room Image & Availability Badge */}
+                    <div className="relative h-52 w-full rounded-2xl overflow-hidden bg-zinc-100 mb-5">
+                      <img
+                        src={imageSrc}
+                        alt={room.title || room.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      />
+                      <div className="absolute top-3 right-3">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-md rounded-full text-xs font-semibold text-emerald-600 shadow-sm">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                          Available
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Title & Hourly Rate */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <h3 className="text-xl font-bold text-[#0F172A] tracking-tight line-clamp-1">
+                        {room.title || room.name}
+                      </h3>
+                      <span className="px-3 py-1 rounded-xl bg-[#EEF2FF] text-[#4F46E5] text-xs font-bold whitespace-nowrap">
+                        ${room.pricePerHour || room.hourlyRate || 5}/hr
+                      </span>
+                    </div>
+
+                    {/* Short Description (Truncated) */}
+                    <p className="text-sm text-[#64748B] mb-4 line-clamp-2 min-h-[40px]">
+                      {shortDesc}
+                    </p>
+
+                    {/* Meta Details: Floor & Capacity */}
+                    <div className="grid grid-cols-2 gap-2 py-3 border-t border-b border-indigo-50 text-xs font-medium text-[#64748B] mb-4">
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="w-4 h-4 text-[#6366F1]" />
+                        <span>{room.floor || 'Floor 1'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-[#6366F1]" />
+                        <span>{room.capacity ? `${room.capacity} people` : '2–4 people'}</span>
+                      </div>
+                    </div>
+
+                    {/* Amenities Badges: Max 3, rest as "+X more" */}
+                    <div className="flex flex-wrap items-center gap-1.5 mb-6 min-h-[28px]">
+                      {visibleAmenities.map((amenity, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg bg-[#FAFAFB] border border-zinc-200/60 text-[11px] font-medium text-zinc-600"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+                      {remainingCount > 0 && (
+                        <span className="px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-[11px] font-bold text-indigo-600">
+                          +{remainingCount} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* View Details Button -> redirects to /rooms/:id */}
                   <Link
                     href={`/rooms/${room._id}`}
-                    className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-bold transition-all shadow-sm active:scale-95"
+                    className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-[#EEF2FF] border border-indigo-100 text-[#4F46E5] text-sm font-semibold hover:bg-[#6366F1] hover:text-white hover:border-[#6366F1] transition-all shadow-2xs mt-auto"
                   >
                     <span>View Details</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        )}
 
-      {/* Explore All Rooms Link */}
-      <div className="text-center mt-12">
-        <Link
-          href="/rooms"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-slate-300 hover:border-indigo-600 text-slate-800 hover:text-indigo-600 font-semibold text-sm transition-all shadow-sm"
-        >
-          <span>Explore All Study Rooms</span>
-          <ArrowRight className="w-4 h-4" />
-        </Link>
       </div>
     </section>
   );

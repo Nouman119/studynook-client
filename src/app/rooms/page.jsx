@@ -1,8 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { Search, MapPin, Users, SlidersHorizontal, ArrowRight, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
+import { 
+  Search, 
+  MapPin, 
+  Users, 
+  Layers, 
+  SlidersHorizontal, 
+  ArrowRight, 
+  Sparkles, 
+  ChevronLeft, 
+  ChevronRight 
+} from 'lucide-react';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
@@ -18,6 +28,11 @@ export default function AllRoomsPage() {
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
+
+  // Dynamic Browser Tab Title (Requirements)
+  useEffect(() => {
+    document.title = 'StudyNook – Available Rooms';
+  }, []);
 
   const fetchRooms = async () => {
     try {
@@ -38,23 +53,31 @@ export default function AllRoomsPage() {
     fetchRooms();
   }, []);
 
-  const categories = ['All', ...new Set(rooms.map((r) => r.category).filter(Boolean))];
+  // Categories list
+  const categories = useMemo(() => {
+    return ['All', ...new Set(rooms.map((r) => r.category).filter(Boolean))];
+  }, [rooms]);
 
-  const filteredRooms = rooms
-    .filter((room) => {
-      const matchesSearch =
-        room.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        room.location?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'All' || room.category === selectedCategory;
-      return matchesSearch && matchesCategory;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'low-high') return a.pricePerHour - b.pricePerHour;
-      if (sortBy === 'high-low') return b.pricePerHour - a.pricePerHour;
-      return 0;
-    });
+  // Optimized Search, Filter, and Sort using useMemo
+  const filteredRooms = useMemo(() => {
+    return rooms
+      .filter((room) => {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          room.title?.toLowerCase().includes(query) ||
+          room.location?.toLowerCase().includes(query);
+        const matchesCategory =
+          selectedCategory === 'All' || room.category === selectedCategory;
+        return matchesSearch && matchesCategory;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'low-high') return (a.pricePerHour || 0) - (b.pricePerHour || 0);
+        if (sortBy === 'high-low') return (b.pricePerHour || 0) - (a.pricePerHour || 0);
+        return 0;
+      });
+  }, [rooms, searchQuery, selectedCategory, sortBy]);
 
-  // Reset to page 1 when filter/search changes
+  // Reset to page 1 when search or filter criteria change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, sortBy]);
@@ -67,8 +90,11 @@ export default function AllRoomsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex items-center justify-center bg-white dark:bg-zinc-950">
-        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-600"></div>
+      <div className="min-h-[70vh] flex flex-col items-center justify-center bg-white dark:bg-zinc-950">
+        <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+        <p className="text-xs text-slate-500 mt-3 font-medium tracking-wide">
+          Loading available study rooms...
+        </p>
       </div>
     );
   }
@@ -114,6 +140,7 @@ export default function AllRoomsPage() {
           </div>
         </div>
 
+        {/* Category Filter Chips */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 pt-1 scrollbar-none border-t border-gray-100 dark:border-zinc-800/80">
           <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 mr-1 flex items-center gap-1.5">
             <SlidersHorizontal className="w-3.5 h-3.5" /> Categories:
@@ -146,53 +173,92 @@ export default function AllRoomsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentRooms.map((room) => (
-            <div
-              key={room._id}
-              className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
-            >
-              <div>
-                <div className="relative h-52 overflow-hidden bg-gray-100 dark:bg-zinc-800">
-                  <img
-                    src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
-                    alt={room.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
-                  <span className="absolute top-3.5 right-3.5 px-3.5 py-1.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md text-indigo-600 dark:text-indigo-400 text-xs font-extrabold rounded-full shadow-lg">
-                    ${room.pricePerHour} <span className="text-[10px] font-normal text-gray-500">/ hr</span>
-                  </span>
+          {currentRooms.map((room) => {
+            const amenities = room.amenities || [];
+            const visibleAmenities = amenities.slice(0, 3);
+            const extraCount = amenities.length - 3;
+
+            return (
+              <div
+                key={room._id}
+                className="bg-white dark:bg-zinc-900 border border-gray-100 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="relative h-52 overflow-hidden bg-gray-100 dark:bg-zinc-800">
+                    <img
+                      src={room.images?.[0] || 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80'}
+                      alt={room.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                    <span className="absolute top-3.5 right-3.5 px-3.5 py-1.5 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md text-indigo-600 dark:text-indigo-400 text-xs font-extrabold rounded-full shadow-lg">
+                      ${room.pricePerHour} <span className="text-[10px] font-normal text-gray-500">/ hr</span>
+                    </span>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="flex items-center justify-between text-xs text-gray-400 mb-2 font-medium">
+                      <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
+                        {room.category || 'Study Space'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-indigo-500" />
+                        {room.floor || 'Floor 1'}
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mb-2 line-clamp-1">
+                      {room.title}
+                    </h3>
+                    
+                    <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 mb-3 font-medium">
+                      <MapPin className="w-3.5 h-3.5 text-indigo-600 shrink-0" /> 
+                      <span className="truncate">{room.location}</span>
+                    </p>
+
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4">
+                      {room.description}
+                    </p>
+
+                    {/* Amenities Chips */}
+                    {amenities.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {visibleAmenities.map((amenity, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 text-[10px] font-semibold px-2 py-0.5 rounded-md"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                        {extraCount > 0 && (
+                          <span className="bg-indigo-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded-md">
+                            +{extraCount} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <div className="p-6">
-                  <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">
-                    {room.category || 'Study Space'}
-                  </span>
-                  <h3 className="text-lg font-extrabold text-gray-900 dark:text-white mt-1 mb-2 line-clamp-1">{room.title}</h3>
-                  <p className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 mb-3 font-medium">
-                    <MapPin className="w-3.5 h-3.5 text-indigo-600" /> {room.location}
-                  </p>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-zinc-400 line-clamp-2 leading-relaxed mb-4">{room.description}</p>
+                <div className="px-6 pb-6 pt-3 flex items-center justify-between border-t border-gray-100 dark:border-zinc-800/80">
+                  <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 font-semibold">
+                    <Users className="w-4 h-4 text-indigo-600" /> {room.capacity} Seats
+                  </div>
+                  <Link
+                    href={`/rooms/${room._id}`}
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition"
+                  >
+                    View Details <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
-
-              <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-gray-100 dark:border-zinc-800/80">
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 font-semibold">
-                  <Users className="w-4 h-4 text-indigo-600" /> {room.capacity} Seats
-                </div>
-                <Link
-                  href={`/rooms/${room._id}`}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition"
-                >
-                  View Details <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Modern Pagination Bar */}
+      {/* Pagination Bar */}
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2 mt-12">
           <button
