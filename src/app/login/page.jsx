@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import toast from 'react-hot-toast';
 import { LogIn, Mail, Lock, Sparkles } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,6 @@ export default function LoginPage() {
     }
   }, [user, router, from]);
 
-  // ইমেইল ফরম্যাট চেক করার রিজেক্স ভ্যালিডেটর
   const isValidEmail = (val) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   };
@@ -35,17 +34,14 @@ export default function LoginPage() {
   const handleEmailLogin = async (e) => {
     e.preventDefault();
 
-    // ১. খালি ফিল্ড চেক
     if (!email.trim()) {
       return toast.error('Please enter your email address');
     }
 
-    // ২. উল্টাপাল্টা টেক্সট বা ভুল ইমেইল ফরম্যাট চেক (যেমন: 'sadasda')
     if (!isValidEmail(email.trim())) {
       return toast.error('Please enter a valid email address (e.g. user@example.com)');
     }
 
-    // ৩. পাসওয়ার্ড খালি আছে কিনা চেক
     if (!password) {
       return toast.error('Please enter your password');
     }
@@ -89,7 +85,6 @@ export default function LoginPage() {
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-gradient-to-b from-[#EEF2FF]/40 via-white to-[#FAFAFB]">
       <div className="w-full max-w-md bg-white border border-indigo-50/80 rounded-3xl p-8 sm:p-10 shadow-[0_10px_35px_-10px_rgba(99,102,241,0.12)]">
         
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-600 text-xs font-bold mb-3 border border-indigo-100">
             <Sparkles className="w-3.5 h-3.5" /> Welcome Back
@@ -102,7 +97,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* ফর্মটিতে noValidate যোগ করা হয়েছে যাতে ব্রাউজার নিজে আটকে না দেয় */}
         <form onSubmit={handleEmailLogin} noValidate className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
@@ -152,7 +146,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-slate-200"></div>
@@ -162,7 +155,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Google Login Button */}
         <button
           type="button"
           onClick={handleGoogleLogin}
@@ -190,7 +182,6 @@ export default function LoginPage() {
           <span>Continue with Google</span>
         </button>
 
-        {/* Link to Register */}
         <p className="text-center text-xs text-slate-500 mt-6">
           Don’t have an account?{' '}
           <Link href="/register" className="font-bold text-indigo-600 hover:text-indigo-700">
@@ -200,5 +191,13 @@ export default function LoginPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-[85vh] flex items-center justify-center text-sm font-medium text-slate-500">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }
