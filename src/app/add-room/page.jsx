@@ -95,6 +95,7 @@ export default function AddRoomPage() {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(roomData),
       });

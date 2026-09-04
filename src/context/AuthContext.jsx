@@ -35,9 +35,21 @@ export const AuthProvider = ({ children }) => {
 
   const checkUserStatus = async () => {
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+      
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+        headers,
         credentials: 'include',
       });
+
       const data = await res.json();
 
       if (data?.success && data?.user) {
@@ -54,8 +66,8 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('studynook_user', JSON.stringify(userData));
   };
 
-  // ইমেইল ও পাসওয়ার্ড দিয়ে সাধারণ লগইন
-const loginUser = async (email, password) => {
+  // ইমেইল ও পাসওয়ার্ড দিয়ে সাধারণ লগইন
+  const loginUser = async (email, password) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
@@ -66,7 +78,6 @@ const loginUser = async (email, password) => {
         body: JSON.stringify({ email, password }),
       });
 
-      // ব্যাকএন্ড স্ট্যাটাস কোড 401 বা 400 হলেও JSON ডাটা রিড করা
       let data = {};
       try {
         data = await res.json();
@@ -75,10 +86,12 @@ const loginUser = async (email, password) => {
       }
 
       if (res.ok && data?.success) {
+        if (data.token) {
+          localStorage.setItem('studynook_token', data.token);
+        }
         login(data.user);
         return { success: true };
       } else {
-        // ব্যাকএন্ডের পাঠানো message অথবা ডিফল্ট মেসেজ
         return { 
           success: false, 
           message: data?.message || 'Invalid email or password' 
@@ -93,7 +106,6 @@ const loginUser = async (email, password) => {
     }
   };
 
-  
   // Google Sign In integration
   const googleLogin = async () => {
     try {
@@ -128,6 +140,9 @@ const loginUser = async (email, password) => {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        if (data.token) {
+          localStorage.setItem('studynook_token', data.token);
+        }
         login(data.user);
         await checkUserStatus();
         return { success: true };
@@ -154,6 +169,7 @@ const loginUser = async (email, password) => {
       console.error('Logout error:', error);
     } finally {
       setUser(null);
+      localStorage.removeItem('studynook_token');
       localStorage.removeItem('studynook_user');
       window.location.href = '/login';
     }
@@ -165,12 +181,12 @@ const loginUser = async (email, password) => {
         user, 
         setUser, 
         login, 
-        loginUser,
+        loginUser, 
         logout, 
         loading, 
         checkUserStatus, 
         googleLogin,
-        googleSignIn: googleLogin // দুটি নামই সাপোর্ট করবে
+        googleSignIn: googleLogin
       }}
     >
       {children}
