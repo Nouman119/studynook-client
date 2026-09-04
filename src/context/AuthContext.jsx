@@ -66,7 +66,6 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('studynook_user', JSON.stringify(userData));
   };
 
-  // ইমেইল ও পাসওয়ার্ড দিয়ে সাধারণ লগইন
   const loginUser = async (email, password) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/auth/login`, {

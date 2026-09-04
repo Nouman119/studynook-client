@@ -12,7 +12,6 @@ import {
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 const API_BASE_URL = rawUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
-// Requirement 4.1: নির্দিষ্ট ৬টি Amenities
 const requiredAmenities = [
   'Whiteboard',
   'Projector',
@@ -80,10 +79,8 @@ export default function AddRoomPage() {
     try {
       setLoading(true);
 
-      // ১. টোকেন সেফলি রিড করা
       const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
 
-      // ২. হেডার অবজেক্ট তৈরি
       const headers = {
         'Content-Type': 'application/json',
       };
@@ -96,7 +93,7 @@ export default function AddRoomPage() {
         title: formData.title.trim(),
         floor: formData.floor.trim(),
         pricePerHour: Number(formData.pricePerHour),
-        price: Number(formData.pricePerHour), // ব্যাকএন্ড স্কিমার সাথে দ্বিমুখী সামঞ্জস্য
+        price: Number(formData.pricePerHour),
         capacity: Number(formData.capacity),
         image: formData.image.trim(),
         imageUrl: formData.image.trim(),

@@ -96,13 +96,11 @@ export default function MyListingsPage() {
     }
   };
 
-  // কাস্টম ডিলিট কনফার্মেশন মোডাল ওপেন
   const triggerDeletePrompt = (room) => {
     setSelectedRoomToDelete(room);
     setDeleteModalOpen(true);
   };
 
-  // মোডাল থেকে ডিলিট এক্সিকিউট করা
   const confirmDelete = async () => {
     if (!selectedRoomToDelete?._id) return;
 
