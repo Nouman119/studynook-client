@@ -79,24 +79,39 @@ export default function AddRoomPage() {
 
     try {
       setLoading(true);
+
+      // ১. টোকেন সেফলি রিড করা
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      // ২. হেডার অবজেক্ট তৈরি
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const roomData = {
         title: formData.title.trim(),
         floor: formData.floor.trim(),
         pricePerHour: Number(formData.pricePerHour),
+        price: Number(formData.pricePerHour), // ব্যাকএন্ড স্কিমার সাথে দ্বিমুখী সামঞ্জস্য
         capacity: Number(formData.capacity),
         image: formData.image.trim(),
+        imageUrl: formData.image.trim(),
         images: formData.image.trim() ? [formData.image.trim()] : [],
         description: formData.description.trim(),
-        amenities: formData.amenities
+        amenities: formData.amenities,
+        userEmail: user?.email,
+        userName: user?.name,
+        createdAt: new Date()
       };
 
       const res = await fetch(`${API_BASE_URL}/api/rooms`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
         body: JSON.stringify(roomData),
       });
 

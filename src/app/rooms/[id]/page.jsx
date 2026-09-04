@@ -156,6 +156,15 @@ export default function RoomDetailsPage() {
 
     try {
       setBookingLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       // Format date to Day Month Year (e.g., 15 Oct 2026)
       const formattedDate = new Date(`${bookingDate}T00:00:00`).toLocaleDateString('en-GB', {
@@ -181,9 +190,7 @@ export default function RoomDetailsPage() {
       const res = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(bookingPayload),
       });
 
@@ -233,6 +240,15 @@ export default function RoomDetailsPage() {
     e.preventDefault();
     try {
       setUpdateLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const updatedPayload = {
         title: editFormData.title.trim(),
@@ -248,9 +264,7 @@ export default function RoomDetailsPage() {
       const res = await fetch(`${API_BASE_URL}/api/rooms/${room._id}`, {
         method: 'PATCH',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(updatedPayload)
       });
 
@@ -275,8 +289,19 @@ export default function RoomDetailsPage() {
   const confirmDeleteRoom = async () => {
     try {
       setDeleteLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/rooms/${room._id}`, {
         method: 'DELETE',
+        headers,
         credentials: 'include',
       });
       const data = await res.json();

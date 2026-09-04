@@ -42,7 +42,19 @@ export default function MyBookingsPage() {
   const fetchMyBookings = async () => {
     try {
       setLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/bookings/my-bookings`, {
+        method: 'GET',
+        headers,
         credentials: 'include',
       });
       const data = await res.json();
@@ -59,7 +71,7 @@ export default function MyBookingsPage() {
     }
   };
 
-  // Check if booking date/time is in the future (Requirement: today's future or later)
+  // Check if booking date/time is in the future
   const isBookingInFuture = (booking) => {
     try {
       if (booking.endTime && !isNaN(new Date(booking.endTime).getTime())) {
@@ -94,8 +106,19 @@ export default function MyBookingsPage() {
 
     try {
       setActionLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/bookings/${selectedBookingToCancel._id}/cancel`, {
         method: 'PATCH',
+        headers,
         credentials: 'include',
       });
       const data = await res.json();
@@ -158,7 +181,7 @@ export default function MyBookingsPage() {
           </Link>
         </div>
 
-        {/* Empty State (Requirement 5.2: Exact text) */}
+        {/* Empty State */}
         {bookings.length === 0 ? (
           <div className="bg-white border border-dashed border-slate-200 rounded-[2rem] p-16 text-center space-y-4 shadow-sm">
             <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto">
@@ -192,7 +215,6 @@ export default function MyBookingsPage() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {bookings.map((booking) => {
-                    // Populate correct room image
                     const thumbnail =
                       booking.roomImage ||
                       booking.roomDetails?.image ||
@@ -202,7 +224,6 @@ export default function MyBookingsPage() {
                       booking.room?.images?.[0] ||
                       'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=300&q=80';
 
-                    // Safeguard against 'Invalid Date' display
                     const displaySlot = 
                       booking.timeSlot && !booking.timeSlot.includes('Invalid')
                         ? booking.timeSlot
@@ -273,7 +294,7 @@ export default function MyBookingsPage() {
                           )}
                         </td>
 
-                        {/* Cancel Button (Only if confirmed AND future date) */}
+                        {/* Cancel Button */}
                         <td className="py-4 px-6 text-right">
                           {canCancel ? (
                             <button
