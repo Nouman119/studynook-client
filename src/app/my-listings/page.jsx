@@ -65,19 +65,26 @@ export default function MyListingsPage() {
   const fetchMyListings = async () => {
     try {
       setLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/rooms/my-rooms`, {
         method: 'GET',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers,
       });
 
       const data = await res.json();
 
       if (res.ok && data?.success) {
-        setListings(data.data || []);
+        setListings(data.data || data.rooms || []);
       } else {
         setListings([]);
       }
@@ -101,8 +108,19 @@ export default function MyListingsPage() {
 
     try {
       setDeleteLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/rooms/${selectedRoomToDelete._id}`, {
         method: 'DELETE',
+        headers,
         credentials: 'include',
       });
       const data = await res.json();
@@ -128,9 +146,9 @@ export default function MyListingsPage() {
     setEditFormData({
       title: room.title || '',
       floor: room.floor || '1st Floor',
-      pricePerHour: room.pricePerHour || '',
+      pricePerHour: room.pricePerHour || room.price || '',
       capacity: room.capacity || '',
-      image: room.image || room.images?.[0] || '',
+      image: room.image || room.imageUrl || room.images?.[0] || '',
       description: room.description || '',
       amenities: Array.isArray(room.amenities) ? room.amenities : []
     });
@@ -152,24 +170,33 @@ export default function MyListingsPage() {
 
     try {
       setUpdateLoading(true);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('studynook_token') : null;
+
+      const headers = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
 
       const updatedPayload = {
         title: editFormData.title.trim(),
         floor: editFormData.floor.trim(),
         pricePerHour: Number(editFormData.pricePerHour),
+        price: Number(editFormData.pricePerHour),
         capacity: Number(editFormData.capacity),
         description: editFormData.description.trim(),
         amenities: editFormData.amenities,
         image: editFormData.image.trim(),
+        imageUrl: editFormData.image.trim(),
         images: editFormData.image.trim() ? [editFormData.image.trim()] : []
       };
 
       const res = await fetch(`${API_BASE_URL}/api/rooms/${editingRoom._id}`, {
         method: 'PATCH',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(updatedPayload)
       });
 
@@ -256,7 +283,7 @@ export default function MyListingsPage() {
               </p>
             </div>
             <Link
-              href="/rooms/add"
+              href="/add-room"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs transition cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create First Listing
@@ -298,6 +325,7 @@ export default function MyListingsPage() {
                   {filteredListings.map((room) => {
                     const thumbnail =
                       room.image ||
+                      room.imageUrl ||
                       room.images?.[0] ||
                       'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=300&q=80';
 
@@ -334,7 +362,7 @@ export default function MyListingsPage() {
                         </td>
 
                         <td className="py-4 px-6 font-bold text-slate-900 text-sm">
-                          ${room.pricePerHour || 0}
+                          ${room.pricePerHour || room.price || 0}
                           <span className="text-xs font-normal text-slate-500"> / hr</span>
                         </td>
 
@@ -376,7 +404,7 @@ export default function MyListingsPage() {
 
       </div>
 
-      {/* Custom Sleek Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {deleteModalOpen && selectedRoomToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white border border-slate-100 rounded-3xl shadow-2xl max-w-md w-full p-6 text-center">
